@@ -1,0 +1,290 @@
+﻿using Messenger.Shared;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Linq;
+using System.Text;
+using System.Text.Json;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace Messenger.Client
+{
+    public partial class NewChatForm : Form
+    {
+        private int currentUserId;
+        private string currentDepartment;
+        private NetworkClient networkClient;
+        private List<Department> departments = new List<Department>();
+        private List<User> availableUsers = new List<User>();
+
+        public NewChatForm(int userId, string department, NetworkClient client, bool isAdmin)
+        {
+            InitializeComponent();
+            ApplyFuturisticStyle();
+            currentUserId = userId;
+            currentDepartment = department;
+            networkClient = client;
+            networkClient.OnPacketReceived += OnPacketReceived;
+            this.Load += NewChatForm_Load;
+            picSearch.Paint += PicSearch_Paint;
+
+            btnCreate.Click += BtnCreate_Click;
+            btnCancel.Click += BtnCancel_Click;
+            lstDepartments.SelectedIndexChanged += LstDepartments_SelectedIndexChanged;
+            tvPrivateUsers.NodeMouseDoubleClick += TvPrivateUsers_NodeMouseDoubleClick;
+            tvPrivateUsers.AfterSelect += TvPrivateUsers_AfterSelect;
+            tvGroupUsers.AfterCheck += TvGroupUsers_AfterCheck;
+            txtChatName.TextChanged += TxtChatName_TextChanged;
+            tabControl.SelectedIndexChanged += TabControl_SelectedIndexChanged;
+
+            // Если пользователь не админ – удаляем вкладку "Отдел"
+            if (!isAdmin)
+            {
+                for (int i = 0; i < tabControl.TabPages.Count; i++)
+                {
+                    if (tabControl.TabPages[i].Text == "Отдел")
+                    {
+                        tabControl.TabPages.RemoveAt(i);
+                        break;
+                    }
+                }
+            }
+        }
+
+        private void ApplyFuturisticStyle()
+        {
+            this.BackColor = Color.FromArgb(30, 30, 46);
+            this.ForeColor = Color.White;
+            panelMain.BackColor = Color.FromArgb(45, 45, 58);
+            panelHeader.BackColor = Color.FromArgb(20, 20, 30);
+            lblTitle.ForeColor = Color.FromArgb(0, 229, 255);
+            lblSubtitle.ForeColor = Color.FromArgb(180, 180, 200);
+            tabControl.BackColor = Color.FromArgb(45, 45, 58);
+            tabControl.ForeColor = Color.White;
+            txtSearch.BackColor = Color.FromArgb(60, 60, 80);
+            txtSearch.ForeColor = Color.White;
+            lstDepartments.BackColor = Color.FromArgb(60, 60, 80);
+            lstDepartments.ForeColor = Color.White;
+            tvPrivateUsers.BackColor = Color.FromArgb(60, 60, 80);
+            tvPrivateUsers.ForeColor = Color.White;
+            tvGroupUsers.BackColor = Color.FromArgb(60, 60, 80);
+            tvGroupUsers.ForeColor = Color.White;
+            txtChatName.BackColor = Color.FromArgb(60, 60, 80);
+            txtChatName.ForeColor = Color.White;
+            btnCreate.BackColor = Color.FromArgb(0, 229, 255);
+            btnCreate.ForeColor = Color.Black;
+            btnCancel.BackColor = Color.Transparent;
+            btnCancel.ForeColor = Color.FromArgb(0, 229, 255);
+            btnCancel.FlatAppearance.BorderColor = Color.FromArgb(0, 229, 255);
+        }
+
+        private void NewChatForm_Load(object sender, EventArgs e)
+        {
+            networkClient.SendPacket(new NetworkPacket { Command = Shared.CommandType.GetDepartments });
+            networkClient.SendPacket(new NetworkPacket { Command = Shared.CommandType.GetAvailableUsers, Data = currentUserId });
+        }
+
+        private void OnPacketReceived(NetworkPacket packet)
+        {
+            if (InvokeRequired)
+            {
+                Invoke(new Action<NetworkPacket>(OnPacketReceived), packet);
+                return;
+            }
+
+            Console.WriteLine($"NewChatForm получил: {packet.Command}");
+
+            try
+            {
+                switch (packet.Command)
+                {
+                    case Shared.CommandType.DepartmentsList:
+                        var jsonDept = (JsonElement)packet.Data;
+                        string json = jsonDept.GetRawText();
+                        departments = JsonSerializer.Deserialize<List<Department>>(json);
+                        UpdateDepartmentsList();
+                        break;
+                    case Shared.CommandType.AvailableUsersList:
+                        var jsonUsers = (JsonElement)packet.Data;
+                        string usersJson = jsonUsers.GetRawText();
+                        availableUsers = JsonSerializer.Deserialize<List<User>>(usersJson);
+                        UpdateUsersList();
+                        break;
+                    case Shared.CommandType.ChatCreated:
+                        DialogResult = DialogResult.OK;
+                        Close();
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка обработки пакета: {ex.Message}");
+            }
+        }
+
+        private void UpdateDepartmentsList()
+        {
+            lstDepartments.Items.Clear();
+            foreach (var dept in departments.Where(d => d.Name != currentDepartment))
+                lstDepartments.Items.Add(dept);
+            if (lstDepartments.Items.Count > 0)
+                lstDepartments.SelectedIndex = 0;
+            UpdateCreateButton();
+        }
+
+        private void UpdateUsersList()
+        {
+            // Личное дерево
+            tvPrivateUsers.Nodes.Clear();
+            var usersByDept = availableUsers.Where(u => u.Id != currentUserId)
+                                             .GroupBy(u => u.Department)
+                                             .OrderBy(g => g.Key);
+            foreach (var group in usersByDept)
+            {
+                TreeNode deptNode = new TreeNode(group.Key);
+                deptNode.ForeColor = Color.White;
+                foreach (var user in group.OrderBy(u => u.FullName))
+                {
+                    string display = string.IsNullOrEmpty(user.Position)
+                        ? user.FullName
+                        : $"{user.FullName} ({user.Position})";
+                    TreeNode userNode = new TreeNode(display);
+                    userNode.Tag = user;
+                    userNode.ForeColor = Color.White;
+                    deptNode.Nodes.Add(userNode);
+                }
+                tvPrivateUsers.Nodes.Add(deptNode);
+            }
+            tvPrivateUsers.ExpandAll();
+
+            // Групповое дерево
+            tvGroupUsers.Nodes.Clear();
+            foreach (var group in usersByDept)
+            {
+                TreeNode deptNode = new TreeNode(group.Key);
+                deptNode.ForeColor = Color.White;
+                foreach (var user in group.OrderBy(u => u.FullName))
+                {
+                    string display = string.IsNullOrEmpty(user.Position)
+                        ? user.FullName
+                        : $"{user.FullName} ({user.Position})";
+                    TreeNode userNode = new TreeNode(display);
+                    userNode.Tag = user;
+                    userNode.ForeColor = Color.White;
+                    deptNode.Nodes.Add(userNode);
+                }
+                tvGroupUsers.Nodes.Add(deptNode);
+            }
+            tvGroupUsers.ExpandAll();
+
+            UpdateCreateButton();
+        }
+
+        private void UpdateCreateButton()
+        {
+            if (tabControl.SelectedTab == tabDepartment)
+                btnCreate.Enabled = lstDepartments.SelectedItem != null;
+            else if (tabControl.SelectedTab == tabPrivate)
+                btnCreate.Enabled = tvPrivateUsers.SelectedNode?.Tag is User;
+            else // tabGroup
+                btnCreate.Enabled = !string.IsNullOrWhiteSpace(txtChatName.Text) && GetCheckedGroupUsers().Count > 0;
+        }
+
+        private List<User> GetCheckedGroupUsers()
+        {
+            var users = new List<User>();
+            foreach (TreeNode deptNode in tvGroupUsers.Nodes)
+            {
+                foreach (TreeNode userNode in deptNode.Nodes)
+                {
+                    if (userNode.Checked && userNode.Tag is User user)
+                        users.Add(user);
+                }
+            }
+            return users;
+        }
+
+        private void TabControl_SelectedIndexChanged(object sender, EventArgs e) => UpdateCreateButton();
+        private void LstDepartments_SelectedIndexChanged(object sender, EventArgs e) => UpdateCreateButton();
+        private void TvPrivateUsers_AfterSelect(object sender, TreeViewEventArgs e) => UpdateCreateButton();
+        private void TvGroupUsers_AfterCheck(object sender, TreeViewEventArgs e)
+        {
+            // Чтобы предотвратить рекурсию при программной установке флажков
+            if (e.Action != TreeViewAction.Unknown)
+            {
+                UpdateCreateButton();
+            }
+        }
+        private void TxtChatName_TextChanged(object sender, EventArgs e) => UpdateCreateButton();
+
+        private void TvPrivateUsers_NodeMouseDoubleClick(object sender, TreeNodeMouseClickEventArgs e)
+        {
+            if (e.Node.Tag is User user)
+            {
+                networkClient.SendPacket(new NetworkPacket
+                {
+                    Command = Shared.CommandType.CreatePrivateChat,
+                    Data = new { otherUserId = user.Id }
+                });
+            }
+        }
+
+        private void BtnCreate_Click(object sender, EventArgs e)
+        {
+            if (tabControl.SelectedTab == tabDepartment && lstDepartments.SelectedItem != null)
+            {
+                var dept = (Department)lstDepartments.SelectedItem;
+                var participants = availableUsers.Where(u => u.DepartmentId == dept.Id).Select(u => u.Id).ToList();
+                if (!participants.Contains(currentUserId))
+                    participants.Add(currentUserId);
+                networkClient.SendPacket(new NetworkPacket
+                {
+                    Command = Shared.CommandType.CreateGroupChat,
+                    Data = new { name = dept.Name, participants }
+                });
+            }
+            else if (tabControl.SelectedTab == tabPrivate && tvPrivateUsers.SelectedNode?.Tag is User selectedUser)
+            {
+                networkClient.SendPacket(new NetworkPacket
+                {
+                    Command = Shared.CommandType.CreatePrivateChat,
+                    Data = new { otherUserId = selectedUser.Id }
+                });
+            }
+            else if (tabControl.SelectedTab == tabGroup)
+            {
+                var selectedUsers = GetCheckedGroupUsers();
+                var participants = selectedUsers.Select(u => u.Id).ToList();
+                participants.Add(currentUserId); // добавляем себя
+                networkClient.SendPacket(new NetworkPacket
+                {
+                    Command = Shared.CommandType.CreateGroupChat,
+                    Data = new { name = txtChatName.Text, participants }
+                });
+            }
+        }
+
+        private void BtnCancel_Click(object sender, EventArgs e) => Close();
+
+        private void PicSearch_Paint(object sender, PaintEventArgs e)
+        {
+            using (var pen = new Pen(Color.Gray, 2))
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                e.Graphics.DrawEllipse(pen, 2, 2, 12, 12);
+                e.Graphics.DrawLine(pen, 11, 11, 16, 16);
+            }
+        }
+
+        // Отписка от события при закрытии формы
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            networkClient.OnPacketReceived -= OnPacketReceived;
+            base.OnFormClosing(e);
+        }
+    }
+}

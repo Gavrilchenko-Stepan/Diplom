@@ -1,0 +1,618 @@
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Sockets;
+using System.Text;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+using Messenger.Shared;
+
+namespace Messenger.Server
+{
+    public class ClientHandler
+    {
+        private TcpClient client;
+        private MessengerServer server;
+        private DatabaseManager db;
+        private NetworkStream stream;
+        private StreamReader reader;
+        private StreamWriter writer;
+        private bool isConnected;
+
+        public User User { get; private set; }
+
+        public ClientHandler(TcpClient client, MessengerServer server, DatabaseManager db)
+        {
+            this.client = client;
+            this.server = server;
+            this.db = db;
+            stream = client.GetStream();
+            reader = new StreamReader(stream, Encoding.UTF8);
+            writer = new StreamWriter(stream, Encoding.UTF8) { AutoFlush = true };
+            isConnected = true;
+        }
+
+        public void HandleClient()
+        {
+            try
+            {
+                while (isConnected && client.Connected)
+                {
+                    if (stream.DataAvailable)
+                    {
+                        string json = reader.ReadLine();
+                        if (!string.IsNullOrEmpty(json))
+                        {
+                            var packet = JsonSerializer.Deserialize<NetworkPacket>(json);
+                            ProcessPacket(packet);
+                        }
+                    }
+                    Thread.Sleep(100);
+                }
+            }
+            catch (Exception ex)
+            {
+                server.Log($"Ошибка клиента: {ex.Message}");
+            }
+            finally
+            {
+                Disconnect();
+            }
+        }
+
+        private void ProcessPacket(NetworkPacket packet)
+        {
+            if (packet.Command != CommandType.GetChats)
+                server.Log($"Команда: {packet.Command} от пользователя {User?.Username ?? "unknown"}");
+            try
+            {
+                switch (packet.Command)
+                {
+                    case CommandType.Login: HandleLogin(packet); break;
+                    case CommandType.GetChats: HandleGetChats(); break;
+                    case CommandType.GetMessages: HandleGetMessages(packet); break;
+                    case CommandType.SendMessage: HandleSendMessage(packet); break;
+                    case CommandType.GetDepartments: HandleGetDepartments(); break;
+                    case CommandType.GetAvailableUsers: HandleGetAvailableUsers(packet); break;
+                    case CommandType.CreatePrivateChat: HandleCreatePrivateChat(packet); break;
+                    case CommandType.CreateGroupChat: HandleCreateGroupChat(packet); break;
+                    case CommandType.Logout: Disconnect(); break;
+                    case CommandType.MessagesRead:
+                        HandleMessagesRead(packet);
+                        break;
+                    case CommandType.UserStatusChanged:
+                        SendPacket(packet);
+                        break;
+                    case CommandType.AddChatParticipant:
+                        HandleAddParticipant(packet);
+                        break;
+                    case CommandType.RemoveChatParticipant:
+                        HandleRemoveParticipant(packet);
+                        break;
+                    case CommandType.GetChatInfo:
+                        HandleGetChatInfo(packet);
+                        break;
+                    case CommandType.DeleteMessage:
+                        HandleDeleteMessage(packet);
+                        break;
+                    case CommandType.GetAllUsers:
+                        HandleGetAllUsers(packet);
+                        break;
+                    case CommandType.AddUser:
+                        HandleAddUser(packet);
+                        break;
+                    case CommandType.UpdateUser:
+                        HandleUpdateUser(packet);
+                        break;
+                    case CommandType.DeleteUser:
+                        HandleDeleteUser(packet);
+                        break;
+                    case CommandType.EditMessage:
+                        HandleEditMessage(packet);
+                        break;
+                    case CommandType.ChangePassword:
+                        HandleChangePassword(packet);
+                        break;
+                    case CommandType.DeleteChat:
+                        HandleDeleteChat(packet);
+                        break;
+                    case CommandType.GetChatsForHistory:
+                        HandleGetChatsForHistory();
+                        break;
+                    case CommandType.GetHistoryMessages:
+                        HandleGetHistoryMessages(packet);
+                        break;
+                    case CommandType.DeleteHistoryMessages:
+                        HandleDeleteHistoryMessages(packet);
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                server.Log($"Ошибка обработки пакета {packet.Command}: {ex.Message}");
+                SendPacket(new NetworkPacket { Command = CommandType.Error, Data = $"Ошибка: {ex.Message}" });
+            }
+        }
+
+        private void HandleLogin(NetworkPacket packet)
+        {
+            server.Log("HandleLogin started");
+            var data = packet.Data as JsonElement?;
+            if (!data.HasValue)
+            {
+                server.Log("Login data is null");
+                return;
+            }
+
+            try
+            {
+                string username = data.Value.GetProperty("username").GetString();
+                string password = data.Value.GetProperty("password").GetString();
+                server.Log($"Login attempt: {username}");
+
+                User = db.AuthenticateUser(username, password);
+                server.Log($"AuthenticateUser returned: {(User != null ? $"IsAdmin={User.IsAdmin}" : "null")} for user {username}");
+
+                if (User != null)
+                {
+                    db.UpdateUserStatus(User.Id, true);
+                    User.IsOnline = true;
+                    SendPacket(new NetworkPacket { Command = CommandType.LoginResponse, Data = new { success = true, user = User } });
+                    server.BroadcastToDepartment(User.Department, new NetworkPacket { Command = CommandType.UserStatusChanged, Data = User }, User.Id);
+                    server.Log($"Пользователь {User.FullName} вошёл");
+                }
+                else
+                {
+                    SendPacket(new NetworkPacket { Command = CommandType.LoginResponse, Data = new { success = false, message = "Неверный логин или пароль" } });
+                    server.Log("Login failed: invalid credentials");
+                }
+            }
+            catch (Exception ex)
+            {
+                server.Log($"Exception in HandleLogin: {ex.Message}");
+            }
+        }
+
+        private void HandleGetChats()
+        {
+            if (User == null) return;
+            var chats = db.GetUserChats(User.Id);
+            SendPacket(new NetworkPacket { Command = CommandType.ChatsList, Data = chats });
+        }
+
+        private void HandleGetMessages(NetworkPacket packet)
+        {
+            if (User == null) return;
+            var jsonElement = (JsonElement)packet.Data;
+            int chatId = jsonElement.GetInt32();
+
+            // Проверяем, имеет ли пользователь доступ к чату
+            if (!db.UserHasAccessToChat(User.Id, chatId))
+            {
+                server.Log($"Пользователь {User.Id} пытается получить сообщения из чата {chatId} без доступа");
+                SendPacket(new NetworkPacket { Command = CommandType.MessagesList, Data = new List<Message>() });
+                return;
+            }
+
+            var msgs = db.GetChatMessages(chatId, User.Id);
+            SendPacket(new NetworkPacket { Command = CommandType.MessagesList, Data = msgs });
+        }
+
+        private void HandleSendMessage(NetworkPacket packet)
+        {
+            if (User == null) return;
+            var jsonElement = (JsonElement)packet.Data;
+            string json = jsonElement.GetRawText();
+            var msg = JsonSerializer.Deserialize<Message>(json);
+
+            bool hasAccess = db.UserHasAccessToChat(User.Id, msg.ChatId);
+
+            // Если нет доступа, но пользователь администратор – проверим, не чат ли это отдела
+            if (!hasAccess && User.IsAdmin)
+            {
+                var chat = db.GetChatById(msg.ChatId);
+                if (chat != null && chat.Type == ChatType.Department)
+                {
+                    hasAccess = true; // администратор может писать в любой чат отдела
+                }
+            }
+
+            if (!hasAccess)
+            {
+                server.Log($"Пользователь {User.Id} пытается отправить в чат {msg.ChatId} без доступа");
+                return;
+            }
+
+            msg.SenderId = User.Id;
+            msg.SenderName = User.FullName;
+            msg.SenderDepartment = User.Department;
+            msg.SentAt = DateTime.Now;
+            int id = db.SaveMessage(msg);
+            msg.Id = id;
+            server.BroadcastToChat(msg.ChatId, new NetworkPacket { Command = CommandType.NewMessage, Data = msg }, -1);
+            server.Log($"Сообщение от {User.FullName} в чат {msg.ChatId}");
+        }
+
+        private void HandleGetDepartments()
+        {
+            if (User == null) return;
+            var depts = db.GetAllDepartments();
+            Console.WriteLine($"HandleGetDepartments: sending {depts.Count} departments");
+            SendPacket(new NetworkPacket { Command = CommandType.DepartmentsList, Data = depts });
+        }
+
+        private void HandleGetAvailableUsers(NetworkPacket packet)
+        {
+            if (User == null) return;
+            var jsonElement = (JsonElement)packet.Data;
+            int uid = jsonElement.GetInt32(); // получаем число напрямую
+            var users = db.GetAvailableUsersForChat(uid);
+            SendPacket(new NetworkPacket { Command = CommandType.AvailableUsersList, Data = users });
+        }
+
+        private void HandleCreatePrivateChat(NetworkPacket packet)
+        {
+            if (User == null) return;
+            var jsonElement = (JsonElement)packet.Data;
+            string json = jsonElement.GetRawText();
+            var data = JsonSerializer.Deserialize<Dictionary<string, int>>(json);
+            int otherId = data["otherUserId"];
+            var chat = db.CreatePrivateChat(User.Id, otherId);
+            SendPacket(new NetworkPacket { Command = CommandType.ChatCreated, Data = chat });
+            // обновить списки чатов у обоих
+            var chats1 = db.GetUserChats(User.Id);
+            var chats2 = db.GetUserChats(otherId);
+            SendPacket(new NetworkPacket { Command = CommandType.ChatsList, Data = chats1 });
+            server.BroadcastToUser(otherId, new NetworkPacket { Command = CommandType.ChatsList, Data = chats2 });
+            server.Log($"Создан личный чат между {User.Id} и {otherId}");
+        }
+
+        private void HandleCreateGroupChat(NetworkPacket packet)
+        {
+            if (User == null) return;
+            var jsonElement = (JsonElement)packet.Data;
+            string json = jsonElement.GetRawText();
+            var data = JsonSerializer.Deserialize<Dictionary<string, object>>(json);
+            string name = data["name"].ToString();
+            // participants может быть JsonElement или списком, поэтому десериализуем отдельно
+            var participants = JsonSerializer.Deserialize<List<int>>(data["participants"].ToString());
+            var chat = db.CreateGroupChat(name, participants, User.Id);
+            SendPacket(new NetworkPacket { Command = CommandType.ChatCreated, Data = chat });
+            // всем участникам обновить списки
+            foreach (var uid in participants)
+            {
+                var chats = db.GetUserChats(uid);
+                server.BroadcastToUser(uid, new NetworkPacket { Command = CommandType.ChatsList, Data = chats });
+            }
+            server.Log($"Создан групповой чат '{name}'");
+        }
+
+        private void HandleMessagesRead(NetworkPacket packet)
+        {
+            if (User == null) return;
+            var jsonElement = (JsonElement)packet.Data;
+            string json = jsonElement.GetRawText();
+            var data = JsonSerializer.Deserialize<Dictionary<string, int>>(json);
+            int chatId = data["chatId"];
+            int lastReadId = data["lastReadMessageId"];
+            db.MarkMessagesAsRead(chatId, User.Id, lastReadId);
+            server.Log($"Пользователь {User.Id} отметил сообщения в чате {chatId} прочитанными до {lastReadId}");
+        }
+
+        public void SendPacket(NetworkPacket packet)
+        {
+            try
+            {
+                string json = JsonSerializer.Serialize(packet);
+                writer.WriteLine(json);
+            }
+            catch (Exception ex)
+            {
+                server.Log($"Ошибка отправки: {ex.Message}");
+            }
+        }
+
+        public void Disconnect()
+        {
+            try
+            {
+                if (User != null)
+                {
+                    db.UpdateUserStatus(User.Id, false);
+                    User.IsOnline = false;
+                    server.BroadcastToDepartment(User.Department, new NetworkPacket { Command = CommandType.UserStatusChanged, Data = User }, User.Id);
+                    server.Log($"Пользователь {User.FullName} вышел");
+                }
+                isConnected = false;
+                reader?.Close();
+                writer?.Close();
+                stream?.Close();
+                client?.Close();
+                server.RemoveClient(this);
+            }
+            catch (Exception ex)
+            {
+                server.Log($"Ошибка при отключении: {ex.Message}");
+            }
+        }
+
+        private void HandleAddParticipant(NetworkPacket packet)
+        {
+            if (User == null || !User.IsAdmin) return;
+
+            var jsonElement = (JsonElement)packet.Data;
+            string json = jsonElement.GetRawText();
+            var data = JsonSerializer.Deserialize<Dictionary<string, int>>(json);
+            int chatId = data["chatId"];
+            int userId = data["userId"];
+
+            var chat = db.GetChatById(chatId);
+            if (chat == null || (chat.Type != ChatType.Department && chat.Type != ChatType.Group)) return;
+
+            db.AddUserToChat(chatId, userId);
+
+            var updatedChat = db.GetChatById(chatId);
+            updatedChat.Participants = db.GetChatParticipants(chatId);
+            server.BroadcastToChat(chatId, new NetworkPacket { Command = CommandType.ChatUpdated, Data = updatedChat });
+
+            var userChats = db.GetUserChats(userId);
+            server.BroadcastToUser(userId, new NetworkPacket { Command = CommandType.ChatsList, Data = userChats });
+
+            server.Log($"Администратор {User.FullName} добавил пользователя {userId} в чат {chatId}");
+        }
+
+        private void HandleRemoveParticipant(NetworkPacket packet)
+        {
+            if (User == null || !User.IsAdmin) return;
+
+            var jsonElement = (JsonElement)packet.Data;
+            string json = jsonElement.GetRawText();
+            var data = JsonSerializer.Deserialize<Dictionary<string, int>>(json);
+            int chatId = data["chatId"];
+            int userId = data["userId"];
+
+            if (userId == User.Id)
+            {
+                server.Log($"Администратор {User.FullName} попытался удалить себя из чата {chatId}");
+                return;
+            }
+
+            var chat = db.GetChatById(chatId);
+            if (chat == null || (chat.Type != ChatType.Department && chat.Type != ChatType.Group)) return;
+
+            db.RemoveUserFromChat(chatId, userId);
+
+            var updatedChat = db.GetChatById(chatId);
+            updatedChat.Participants = db.GetChatParticipants(chatId);
+            server.BroadcastToChat(chatId, new NetworkPacket { Command = CommandType.ChatUpdated, Data = updatedChat });
+
+            var userChats = db.GetUserChats(userId);
+            server.BroadcastToUser(userId, new NetworkPacket { Command = CommandType.ChatsList, Data = userChats });
+
+            server.Log($"Администратор {User.FullName} удалил пользователя {userId} из чата {chatId}");
+        }
+
+        private void HandleGetChatInfo(NetworkPacket packet)
+        {
+            if (User == null) return;
+            int chatId = ((JsonElement)packet.Data).GetInt32(); // для простого числа
+            var chat = db.GetChatById(chatId);
+            if (chat != null)
+            {
+                chat.Participants = db.GetChatParticipants(chatId);
+                SendPacket(new NetworkPacket { Command = CommandType.ChatInfo, Data = chat });
+            }
+        }
+
+        private void HandleDeleteMessage(NetworkPacket packet)
+        {
+            if (User == null)
+            {
+                server.Log("DeleteMessage: User is null");
+                return;
+            }
+
+            // Получаем ID сообщения из пакета
+            int messageId;
+            try
+            {
+                var jsonElement = (JsonElement)packet.Data;
+                messageId = jsonElement.GetInt32();
+            }
+            catch (Exception ex)
+            {
+                server.Log($"DeleteMessage: Error parsing messageId - {ex.Message}");
+                return;
+            }
+
+            server.Log($"DeleteMessage: Attempt to delete message {messageId} by user {User.Id} ({User.FullName})");
+
+            var message = db.GetMessageById(messageId);
+            if (message == null)
+            {
+                server.Log($"DeleteMessage: Message {messageId} not found in database");
+                return;
+            }
+
+            server.Log($"DeleteMessage: Found message: Id={message.Id}, ChatId={message.ChatId}, SenderId={message.SenderId}");
+
+            // Проверяем права: отправитель или администратор
+            if (message.SenderId != User.Id && !User.IsAdmin)
+            {
+                server.Log($"DeleteMessage: User {User.Id} is not sender ({message.SenderId}) and not admin, permission denied");
+                return;
+            }
+
+            // Выполняем удаление
+            try
+            {
+                db.DeleteMessage(messageId);
+                server.Log($"DeleteMessage: Message {messageId} deleted successfully");
+            }
+            catch (Exception ex)
+            {
+                server.Log($"DeleteMessage: Error deleting message {messageId} - {ex.Message}");
+                return;
+            }
+
+            // Рассылаем уведомление об удалении всем участникам чата
+            server.BroadcastToChat(message.ChatId, new NetworkPacket
+            {
+                Command = CommandType.MessageDeleted,
+                Data = messageId
+            }, -1);
+
+            server.Log($"DeleteMessage: Broadcast MessageDeleted for message {messageId} to chat {message.ChatId}");
+        }
+
+        private void HandleChangePassword(NetworkPacket packet)
+        {
+            if (User == null) return;
+            var jsonElement = (JsonElement)packet.Data;
+            string oldPassword = jsonElement.GetProperty("oldPassword").GetString();
+            string newPassword = jsonElement.GetProperty("newPassword").GetString();
+
+            bool success = db.ChangePassword(User.Id, oldPassword, newPassword);
+            if (success)
+            {
+                SendPacket(new NetworkPacket { Command = CommandType.PasswordChanged, Data = true });
+                server.Log($"Пользователь {User.FullName} сменил пароль");
+            }
+            else
+            {
+                SendPacket(new NetworkPacket { Command = CommandType.PasswordChanged, Data = false });
+                server.Log($"Неудачная попытка смены пароля пользователем {User.FullName}");
+            }
+        }
+
+        private void HandleGetAllUsers(NetworkPacket packet)
+        {
+            if (User == null || !User.IsAdmin) return;
+            var users = db.GetAllUsers();
+            SendPacket(new NetworkPacket { Command = CommandType.AllUsersList, Data = users });
+        }
+
+        private void HandleAddUser(NetworkPacket packet)
+        {
+            if (User == null || !User.IsAdmin) return;
+            var jsonElement = (JsonElement)packet.Data;
+            string json = jsonElement.GetRawText();
+            var data = JsonSerializer.Deserialize<Dictionary<string, object>>(json);
+            var user = JsonSerializer.Deserialize<User>(data["user"].ToString());
+            string password = data["password"].ToString();
+            db.AddUser(user, password);
+            SendPacket(new NetworkPacket { Command = CommandType.AllUsersList, Data = db.GetAllUsers() });
+        }
+
+        private void HandleUpdateUser(NetworkPacket packet)
+        {
+            if (User == null || !User.IsAdmin) return;
+            var jsonElement = (JsonElement)packet.Data;
+            string json = jsonElement.GetRawText();
+            var data = JsonSerializer.Deserialize<Dictionary<string, object>>(json);
+            var user = JsonSerializer.Deserialize<User>(data["user"].ToString());
+            string newPassword = data.ContainsKey("password") ? data["password"]?.ToString() : null;
+            db.UpdateUser(user, newPassword);
+            SendPacket(new NetworkPacket { Command = CommandType.AllUsersList, Data = db.GetAllUsers() });
+        }
+
+        private void HandleDeleteUser(NetworkPacket packet)
+        {
+            if (User == null || !User.IsAdmin) return;
+            int userId = ((JsonElement)packet.Data).GetInt32();
+
+            // Проверка на последнего администратора
+            var allUsers = db.GetAllUsers();
+            if (allUsers.Any(u => u.Id == userId && u.IsAdmin))
+            {
+                if (allUsers.Count(u => u.IsAdmin) == 1)
+                {
+                    SendPacket(new NetworkPacket { Command = CommandType.Error, Data = "Нельзя удалить последнего администратора" });
+                    return;
+                }
+            }
+            db.DeleteUser(userId);
+            SendPacket(new NetworkPacket { Command = CommandType.AllUsersList, Data = db.GetAllUsers() });
+        }
+
+        private void HandleEditMessage(NetworkPacket packet)
+        {
+            if (User == null) return;
+            var jsonElement = (JsonElement)packet.Data;
+            int messageId = jsonElement.GetProperty("messageId").GetInt32();
+            string newText = jsonElement.GetProperty("newText").GetString();
+
+            var msg = db.GetMessageById(messageId);
+            if (msg == null) return;
+            if (msg.SenderId != User.Id && !User.IsAdmin) return;
+
+            if (db.UpdateMessage(messageId, newText))
+            {
+                var updatedMsg = db.GetMessageById(messageId);
+                server.BroadcastToChat(msg.ChatId, new NetworkPacket { Command = CommandType.MessageEdited, Data = updatedMsg }, -1);
+            }
+        }
+
+        private void HandleDeleteChat(NetworkPacket packet)
+        {
+            if (User == null || !User.IsAdmin) return;
+            int chatId = ((JsonElement)packet.Data).GetInt32();
+            db.DeleteChat(chatId);
+            // Оповещаем всех участников чата (включая админа)
+            server.BroadcastToChat(chatId, new NetworkPacket { Command = CommandType.ChatDeleted, Data = chatId }, -1);
+            server.Log($"Администратор {User.FullName} удалил чат {chatId}");
+        }
+
+        private void HandleGetChatsForHistory()
+        {
+            if (User == null || !User.IsAdmin) return;
+            var chats = db.GetAllChats();
+            SendPacket(new NetworkPacket { Command = CommandType.ChatsList, Data = chats });
+        }
+
+        private void HandleGetHistoryMessages(NetworkPacket packet)
+        {
+            if (User == null || !User.IsAdmin) return;
+            var json = (JsonElement)packet.Data;
+
+            int? chatId = null;
+            if (json.TryGetProperty("chatId", out var chatIdProp) && chatIdProp.ValueKind != JsonValueKind.Null)
+                chatId = chatIdProp.GetInt32();
+
+            DateTime? startDate = null;
+            if (json.TryGetProperty("startDate", out var startProp) && startProp.ValueKind != JsonValueKind.Null)
+                startDate = startProp.GetDateTime();
+
+            DateTime? endDate = null;
+            if (json.TryGetProperty("endDate", out var endProp) && endProp.ValueKind != JsonValueKind.Null)
+                endDate = endProp.GetDateTime();
+
+            server.Log($"GetHistoryMessages: chatId={chatId}, start={startDate}, end={endDate}");
+
+            var messages = db.GetMessagesFilteredByChatAndDate(chatId, startDate, endDate);
+            server.Log($"GetHistoryMessages: возвращено {messages.Count} сообщений");
+
+            SendPacket(new NetworkPacket { Command = CommandType.MessagesList, Data = messages });
+        }
+
+        private void HandleDeleteHistoryMessages(NetworkPacket packet)
+        {
+            if (User == null || !User.IsAdmin) return;
+            var json = (JsonElement)packet.Data;
+
+            int? chatId = null;
+            if (json.TryGetProperty("chatId", out var chatIdProp) && chatIdProp.ValueKind != JsonValueKind.Null)
+                chatId = chatIdProp.GetInt32();
+
+            DateTime olderThan = json.GetProperty("olderThan").GetDateTime();
+            server.Log($"DeleteHistoryMessages: chatId={chatId}, olderThan={olderThan}");
+
+            int deleted = db.DeleteMessagesByChatAndDate(chatId, olderThan);
+            server.Log($"Удалено сообщений: {deleted}");
+
+            SendPacket(new NetworkPacket { Command = CommandType.Error, Data = $"Удалено сообщений: {deleted}" });
+        }
+    }
+}
