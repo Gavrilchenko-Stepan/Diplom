@@ -60,6 +60,7 @@ namespace Messenger.Shared
         DeleteHistoryMessages, // удалить сообщения за период
 
         DeleteChat,
-        ChatDeleted
+        ChatDeleted,
+        TypingStatus
     }
 }

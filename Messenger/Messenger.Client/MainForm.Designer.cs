@@ -38,9 +38,6 @@ namespace Messenger.Client
         private System.Windows.Forms.Panel panelChatHeader;
         private System.Windows.Forms.PictureBox picChatAvatar;
         private System.Windows.Forms.Label lblChatName;
-        private System.Windows.Forms.Label lblChatDepartment;
-        private System.Windows.Forms.Label lblChatInfo;
-        private System.Windows.Forms.Button btnManageParticipants;
         private System.Windows.Forms.Button btnViewParticipants;
         private System.Windows.Forms.ListBox lstMessages;
         private System.Windows.Forms.Panel panelMessageInput;
@@ -52,6 +49,8 @@ namespace Messenger.Client
         private System.Windows.Forms.Label lblConnectionStatus;
         private System.Windows.Forms.Label lblServerInfo;
         private System.Windows.Forms.Label lblEditingHint;
+        private System.Windows.Forms.Label lblLastSeen;
+        private System.Windows.Forms.Label lblTyping;
 
         protected override void Dispose(bool disposing)
         {
@@ -93,11 +92,10 @@ namespace Messenger.Client
             this.panelChatHeader = new System.Windows.Forms.Panel();
             this.picChatAvatar = new System.Windows.Forms.PictureBox();
             this.lblChatName = new System.Windows.Forms.Label();
-            this.lblChatDepartment = new System.Windows.Forms.Label();
-            this.lblChatInfo = new System.Windows.Forms.Label();
-            this.btnManageParticipants = new System.Windows.Forms.Button();
             this.btnViewParticipants = new System.Windows.Forms.Button();
+            this.lblLastSeen = new System.Windows.Forms.Label();
             this.panelMessageInput = new System.Windows.Forms.Panel();
+            this.lblTyping = new System.Windows.Forms.Label();
             this.txtMessage = new System.Windows.Forms.TextBox();
             this.btnSend = new System.Windows.Forms.Button();
             this.lblEditingHint = new System.Windows.Forms.Label();
@@ -394,10 +392,10 @@ namespace Messenger.Client
             this.lstMessages.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawVariable;
             this.lstMessages.ForeColor = System.Drawing.Color.White;
             this.lstMessages.IntegralHeight = false;
-            this.lstMessages.Location = new System.Drawing.Point(10, 110);
+            this.lstMessages.Location = new System.Drawing.Point(10, 80);
             this.lstMessages.Name = "lstMessages";
             this.lstMessages.SelectionMode = System.Windows.Forms.SelectionMode.None;
-            this.lstMessages.Size = new System.Drawing.Size(830, 389);
+            this.lstMessages.Size = new System.Drawing.Size(830, 419);
             this.lstMessages.TabIndex = 1;
             // 
             // panelChatHeader
@@ -406,20 +404,18 @@ namespace Messenger.Client
             this.panelChatHeader.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.panelChatHeader.Controls.Add(this.picChatAvatar);
             this.panelChatHeader.Controls.Add(this.lblChatName);
-            this.panelChatHeader.Controls.Add(this.lblChatDepartment);
-            this.panelChatHeader.Controls.Add(this.lblChatInfo);
-            this.panelChatHeader.Controls.Add(this.btnManageParticipants);
             this.panelChatHeader.Controls.Add(this.btnViewParticipants);
+            this.panelChatHeader.Controls.Add(this.lblLastSeen);
             this.panelChatHeader.Dock = System.Windows.Forms.DockStyle.Top;
             this.panelChatHeader.Location = new System.Drawing.Point(10, 10);
             this.panelChatHeader.Name = "panelChatHeader";
-            this.panelChatHeader.Size = new System.Drawing.Size(830, 100);
+            this.panelChatHeader.Size = new System.Drawing.Size(830, 70);
             this.panelChatHeader.TabIndex = 0;
             // 
             // picChatAvatar
             // 
             this.picChatAvatar.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
-            this.picChatAvatar.Location = new System.Drawing.Point(15, 15);
+            this.picChatAvatar.Location = new System.Drawing.Point(15, 8);
             this.picChatAvatar.Name = "picChatAvatar";
             this.picChatAvatar.Size = new System.Drawing.Size(50, 50);
             this.picChatAvatar.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
@@ -430,45 +426,11 @@ namespace Messenger.Client
             // 
             this.lblChatName.Font = new System.Drawing.Font("Segoe UI", 14F, System.Drawing.FontStyle.Bold);
             this.lblChatName.ForeColor = System.Drawing.Color.White;
-            this.lblChatName.Location = new System.Drawing.Point(75, 15);
+            this.lblChatName.Location = new System.Drawing.Point(75, 8);
             this.lblChatName.Name = "lblChatName";
             this.lblChatName.Size = new System.Drawing.Size(400, 25);
             this.lblChatName.TabIndex = 1;
             this.lblChatName.Text = "Выберите чат";
-            // 
-            // lblChatDepartment
-            // 
-            this.lblChatDepartment.Font = new System.Drawing.Font("Segoe UI", 9F);
-            this.lblChatDepartment.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(180)))), ((int)(((byte)(180)))), ((int)(((byte)(200)))));
-            this.lblChatDepartment.Location = new System.Drawing.Point(75, 45);
-            this.lblChatDepartment.Name = "lblChatDepartment";
-            this.lblChatDepartment.Size = new System.Drawing.Size(400, 20);
-            this.lblChatDepartment.TabIndex = 2;
-            // 
-            // lblChatInfo
-            // 
-            this.lblChatInfo.Font = new System.Drawing.Font("Segoe UI", 9F);
-            this.lblChatInfo.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(180)))), ((int)(((byte)(180)))), ((int)(((byte)(200)))));
-            this.lblChatInfo.Location = new System.Drawing.Point(75, 70);
-            this.lblChatInfo.Name = "lblChatInfo";
-            this.lblChatInfo.Size = new System.Drawing.Size(400, 20);
-            this.lblChatInfo.TabIndex = 3;
-            // 
-            // btnManageParticipants
-            // 
-            this.btnManageParticipants.Anchor = System.Windows.Forms.AnchorStyles.Right;
-            this.btnManageParticipants.BackColor = System.Drawing.Color.Transparent;
-            this.btnManageParticipants.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
-            this.btnManageParticipants.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.btnManageParticipants.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
-            this.btnManageParticipants.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
-            this.btnManageParticipants.Location = new System.Drawing.Point(700, 35);
-            this.btnManageParticipants.Name = "btnManageParticipants";
-            this.btnManageParticipants.Size = new System.Drawing.Size(100, 30);
-            this.btnManageParticipants.TabIndex = 4;
-            this.btnManageParticipants.Text = "Управление";
-            this.btnManageParticipants.UseVisualStyleBackColor = false;
-            this.btnManageParticipants.Visible = false;
             // 
             // btnViewParticipants
             // 
@@ -478,17 +440,27 @@ namespace Messenger.Client
             this.btnViewParticipants.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnViewParticipants.Font = new System.Drawing.Font("Segoe UI", 9F);
             this.btnViewParticipants.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
-            this.btnViewParticipants.Location = new System.Drawing.Point(590, 35);
+            this.btnViewParticipants.Location = new System.Drawing.Point(709, 21);
             this.btnViewParticipants.Name = "btnViewParticipants";
             this.btnViewParticipants.Size = new System.Drawing.Size(100, 30);
             this.btnViewParticipants.TabIndex = 5;
             this.btnViewParticipants.Text = "👥 Участники";
             this.btnViewParticipants.UseVisualStyleBackColor = false;
             // 
+            // lblLastSeen
+            // 
+            this.lblLastSeen.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.lblLastSeen.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(180)))), ((int)(((byte)(180)))), ((int)(((byte)(200)))));
+            this.lblLastSeen.Location = new System.Drawing.Point(75, 45);
+            this.lblLastSeen.Name = "lblLastSeen";
+            this.lblLastSeen.Size = new System.Drawing.Size(300, 20);
+            this.lblLastSeen.TabIndex = 6;
+            // 
             // panelMessageInput
             // 
             this.panelMessageInput.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(45)))), ((int)(((byte)(58)))));
             this.panelMessageInput.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.panelMessageInput.Controls.Add(this.lblTyping);
             this.panelMessageInput.Controls.Add(this.txtMessage);
             this.panelMessageInput.Controls.Add(this.btnSend);
             this.panelMessageInput.Controls.Add(this.lblEditingHint);
@@ -497,6 +469,16 @@ namespace Messenger.Client
             this.panelMessageInput.Name = "panelMessageInput";
             this.panelMessageInput.Size = new System.Drawing.Size(830, 70);
             this.panelMessageInput.TabIndex = 2;
+            // 
+            // lblTyping
+            // 
+            this.lblTyping.Font = new System.Drawing.Font("Segoe UI", 8F, System.Drawing.FontStyle.Italic);
+            this.lblTyping.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
+            this.lblTyping.Location = new System.Drawing.Point(15, 0);
+            this.lblTyping.Name = "lblTyping";
+            this.lblTyping.Size = new System.Drawing.Size(300, 15);
+            this.lblTyping.TabIndex = 7;
+            this.lblTyping.Visible = false;
             // 
             // txtMessage
             // 

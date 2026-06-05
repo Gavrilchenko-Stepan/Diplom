@@ -127,6 +127,9 @@ namespace Messenger.Server
                     case CommandType.DeleteHistoryMessages:
                         HandleDeleteHistoryMessages(packet);
                         break;
+                    case CommandType.TypingStatus:
+                        HandleTypingStatus(packet);
+                        break;
                 }
             }
             catch (Exception ex)
@@ -613,6 +616,23 @@ namespace Messenger.Server
             server.Log($"Удалено сообщений: {deleted}");
 
             SendPacket(new NetworkPacket { Command = CommandType.Error, Data = $"Удалено сообщений: {deleted}" });
+        }
+
+        private void HandleTypingStatus(NetworkPacket packet)
+        {
+            if (User == null) return;
+
+            var data = ((JsonElement)packet.Data).Deserialize<Dictionary<string, object>>();
+            int chatId = Convert.ToInt32(data["chatId"]);
+            int userId = Convert.ToInt32(data["userId"]);
+            bool isTyping = Convert.ToBoolean(data["isTyping"]);
+
+            // Отправляем уведомление всем участникам чата, кроме отправителя
+            server.BroadcastToChat(chatId, new NetworkPacket
+            {
+                Command = CommandType.TypingStatus,
+                Data = new { chatId, userId, isTyping }
+            }, userId);
         }
     }
 }

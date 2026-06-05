@@ -38,6 +38,10 @@ namespace Messenger.Client
         private Shared.Message editingMessage = null;
         private string originalMessageText = "";
 
+        private Timer typingTimer;
+        private bool isTypingSent = false;
+        private Timer clearTypingTimer;
+
         public MainForm()
         {
             InitializeComponent();
@@ -48,6 +52,29 @@ namespace Messenger.Client
 
             // Скругление углов верхней панели
             SetRoundedRegion(panelTop, 20);
+
+            /// Скругление аватарки чата
+            picChatAvatar.SizeMode = PictureBoxSizeMode.StretchImage;
+            picChatAvatar.Paint += (s, e) => {
+                using (var graphicsPath = new GraphicsPath())
+                {
+                    graphicsPath.AddEllipse(0, 0, picChatAvatar.Width, picChatAvatar.Height);
+                    picChatAvatar.Region = new Region(graphicsPath);
+                }
+            };
+            picChatAvatar.Resize += (s, e) => picChatAvatar.Invalidate();
+
+            // Таймер для отправки "печатает"
+            typingTimer = new Timer { Interval = 1500 };
+            typingTimer.Tick += (s, e) =>
+            {
+                if (isTypingSent) SendTypingStop();
+                typingTimer.Stop();
+                isTypingSent = false;
+            };
+
+            clearTypingTimer = new Timer { Interval = 4000 };
+            clearTypingTimer.Tick += (s, e) => { HideTypingIndicator(); clearTypingTimer.Stop(); };
 
             picUserAvatar.Paint += PicUserAvatar_Paint;
 
@@ -93,6 +120,7 @@ namespace Messenger.Client
             lstMessages.DrawMode = DrawMode.OwnerDrawVariable;
             lstMessages.MeasureItem += LstMessages_MeasureItem;
             lstMessages.DrawItem += LstMessages_DrawItem;
+            lstMessages.Resize += (s, e) => lstMessages.Refresh();
 
 
             // Подписка на события
@@ -140,6 +168,46 @@ namespace Messenger.Client
             // 4. Для красоты — меняем цвет крестика при наведении мыши
             lblClearSearch.MouseEnter += (sender, e) => lblClearSearch.ForeColor = Color.White;
             lblClearSearch.MouseLeave += (sender, e) => lblClearSearch.ForeColor = Color.Gray;
+        }
+
+        private void SendTypingStart()
+        {
+            var data = new Dictionary<string, object>
+    {
+        { "chatId", currentChat.Id },
+        { "userId", currentUser.Id },
+        { "isTyping", true }
+    };
+            networkClient.SendPacket(new NetworkPacket { Command = Shared.CommandType.TypingStatus, Data = data });
+        }
+
+        private void SendTypingStop()
+        {
+            var data = new Dictionary<string, object>
+    {
+        { "chatId", currentChat.Id },
+        { "userId", currentUser.Id },
+        { "isTyping", false }
+    };
+            networkClient.SendPacket(new NetworkPacket { Command = Shared.CommandType.TypingStatus, Data = data });
+        }
+
+        private void ShowTypingIndicator(int userId)
+        {
+            var user = currentChat.Participants?.FirstOrDefault(p => p.Id == userId);
+            if (user != null)
+            {
+                lblTyping.Text = $"{user.FullName} печатает...";
+                lblTyping.Visible = true;
+                clearTypingTimer.Stop();
+                clearTypingTimer.Start();
+            }
+        }
+
+        private void HideTypingIndicator()
+        {
+            lblTyping.Visible = false;
+            clearTypingTimer.Stop();
         }
 
         private void LstChats_MouseMove(object sender, MouseEventArgs e)
@@ -309,7 +377,6 @@ namespace Messenger.Client
                         {
                             currentChat = null;
                             lblChatName.Text = "Выберите чат";
-                            lblChatInfo.Text = "";
                             lstMessages.Items.Clear();
                             btnSend.Enabled = false;
                         }
@@ -409,6 +476,17 @@ namespace Messenger.Client
                         var editedMsg = JsonSerializer.Deserialize<Shared.Message>(jsonEdited.GetRawText());
                         Invoke(new Action(() => HandleMessageEdited(editedMsg)));
                         break;
+                    case Shared.CommandType.TypingStatus:
+                        var typingData = ((JsonElement)packet.Data).Deserialize<Dictionary<string, object>>();
+                        int chatIdTyping = Convert.ToInt32(typingData["chatId"]);
+                        int userIdTyping = Convert.ToInt32(typingData["userId"]);
+                        bool isTyp = Convert.ToBoolean(typingData["isTyping"]);
+                        if (currentChat?.Id == chatIdTyping && userIdTyping != currentUser.Id)
+                        {
+                            if (isTyp) ShowTypingIndicator(userIdTyping);
+                            else HideTypingIndicator();
+                        }
+                        break;
                 }
             }
             catch (Exception ex)
@@ -464,7 +542,6 @@ namespace Messenger.Client
                     // Явно сбрасываем интерфейс в состояние "нет выбранного чата"
                     lstChats.SelectedIndex = -1;
                     lblChatName.Text = "Выберите чат";
-                    lblChatInfo.Text = "";
                     lstMessages.Items.Clear();
                     btnSend.Enabled = false;
                 }
@@ -661,22 +738,14 @@ namespace Messenger.Client
                 Console.WriteLine("  Участник не найден ни в одном чате");
             }
 
+            // Обновляем заголовок текущего чата, если он личный и статус изменился именно у собеседника
             if (currentChat?.Type == ChatType.Private)
             {
                 var other = currentChat.Participants?.FirstOrDefault(p => p.Id == user.Id);
                 if (other != null)
                 {
-                    string status = other.IsOnline ? "● Онлайн" : "● Офлайн";
-                    lblChatInfo.Text = $"Личный чат • {status}";
+                    UpdateCurrentChatHeader(); // теперь вся информация о статусе берётся из currentChat.Participants
                 }
-            }
-            else if (currentChat?.Type == ChatType.Group || currentChat?.Type == ChatType.Department)
-            {
-                int onlineCount = currentChat.Participants?.Count(p => p.IsOnline) ?? 0;
-                if (currentChat.Type == ChatType.Group)
-                    lblChatInfo.Text = $"Групповой чат • {currentChat.Participants.Count} уч. • {onlineCount} онлайн";
-                else
-                    lblChatInfo.Text = $"Чат • {currentChat.Participants.Count} уч. • {onlineCount} онлайн";
             }
         }
 
@@ -783,6 +852,24 @@ namespace Messenger.Client
                 if (topIndex >= 0 && topIndex < lstChats.Items.Count)
                     lstChats.TopIndex = topIndex;
                 lstChats.EndUpdate();
+            }
+
+            // Индикатор печати
+            if (currentChat != null && !string.IsNullOrWhiteSpace(txtMessage.Text))
+            {
+                if (!isTypingSent)
+                {
+                    SendTypingStart();
+                    isTypingSent = true;
+                }
+                typingTimer.Stop();
+                typingTimer.Start();
+            }
+            else if (isTypingSent && string.IsNullOrWhiteSpace(txtMessage.Text))
+            {
+                SendTypingStop();
+                typingTimer.Stop();
+                isTypingSent = false;
             }
         }
 
@@ -1000,44 +1087,48 @@ namespace Messenger.Client
         {
             if (currentChat == null) return;
 
-            string chatName = currentChat.Name;
-            string chatDepartment = "";
-
             if (currentChat.Type == ChatType.Private)
             {
                 var other = currentChat.Participants?.FirstOrDefault(p => p.Id != currentUser.Id);
                 if (other != null)
                 {
-                    chatName = string.IsNullOrEmpty(other.Position) ? other.FullName : $"{other.FullName} ({other.Position})";
-                    chatDepartment = other.Department ?? "";
-                    string status = other.IsOnline ? "● Онлайн" : "● Офлайн";
-                    lblChatInfo.Text = $"Личный чат • {status}";
-                }
-                else
-                {
-                    lblChatInfo.Text = "Личный чат";
+                    string displayName = other.FullName;
+                    if (!string.IsNullOrWhiteSpace(other.Position))
+                        displayName += $" ({other.Position})";
+                    lblChatName.Text = displayName;
+
+                    // Обновление статуса
+                    if (other.IsOnline)
+                    {
+                        lblLastSeen.Text = "онлайн";
+                        lblLastSeen.ForeColor = Color.LightGreen;
+                    }
+                    else if (other.LastSeen.HasValue)
+                    {
+                        var diff = DateTime.Now - other.LastSeen.Value;
+                        if (diff.TotalMinutes < 1)
+                            lblLastSeen.Text = "только что";
+                        else if (diff.TotalHours < 1)
+                            lblLastSeen.Text = $"был(а) {diff.Minutes} мин. назад";
+                        else if (diff.TotalDays < 1)
+                            lblLastSeen.Text = $"был(а) сегодня в {other.LastSeen.Value:HH:mm}";
+                        else if (diff.TotalDays < 2)
+                            lblLastSeen.Text = $"был(а) вчера в {other.LastSeen.Value:HH:mm}";
+                        else
+                            lblLastSeen.Text = $"был(а) {other.LastSeen.Value:dd.MM.yyyy}";
+                        lblLastSeen.ForeColor = Color.Gray;
+                    }
+                    else
+                        lblLastSeen.Text = "";
                 }
             }
-            else if (currentChat.Type == ChatType.Group)
+            else
             {
-                int onlineCount = currentChat.Participants?.Count(p => p.IsOnline) ?? 0;
-                int totalParticipants = currentChat.Participants?.Count ?? 0;
-                lblChatInfo.Text = $"Групповой чат • {totalParticipants} уч. • {onlineCount} онлайн";
-            }
-            else // Department
-            {
-                int onlineCount = currentChat.Participants?.Count(p => p.IsOnline) ?? 0;
-                int totalParticipants = currentChat.Participants?.Count ?? 0;
-                lblChatInfo.Text = $"Чат отдела • {totalParticipants} уч. • {onlineCount} онлайн";
+                lblChatName.Text = currentChat.Name;
+                lblLastSeen.Text = "";
             }
 
             btnViewParticipants.Visible = (currentChat.Type != ChatType.Private);
-
-            btnManageParticipants.Visible = (currentUser != null && currentUser.IsAdmin &&
-                (currentChat.Type == ChatType.Department || currentChat.Type == ChatType.Group));
-
-            lblChatName.Text = chatName;
-            lblChatDepartment.Text = chatDepartment;
         }
 
         private void BtnManageParticipants_Click(object sender, EventArgs e)
@@ -1332,6 +1423,24 @@ namespace Messenger.Client
 
                 // Перемещаем кнопку по вертикали в центр панели
                 btnSend.Top = (panelNewHeight - btnSend.Height) / 2;
+            }
+
+            // Индикатор печати (добавить в конец метода)
+            if (currentChat != null && !string.IsNullOrWhiteSpace(txtMessage.Text))
+            {
+                if (!isTypingSent)
+                {
+                    SendTypingStart();
+                    isTypingSent = true;
+                }
+                typingTimer.Stop();
+                typingTimer.Start();
+            }
+            else if (isTypingSent && string.IsNullOrWhiteSpace(txtMessage.Text))
+            {
+                SendTypingStop();
+                typingTimer.Stop();
+                isTypingSent = false;
             }
         }
 
