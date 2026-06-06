@@ -24,13 +24,12 @@ namespace Messenger.Client
         public NewChatForm(int userId, string department, NetworkClient client, bool isAdmin)
         {
             InitializeComponent();
-            ApplyFuturisticStyle();
+            this.Load += (s, e) => SetRoundedRegion(this, 20); // скругление углов
             currentUserId = userId;
             currentDepartment = department;
             networkClient = client;
             networkClient.OnPacketReceived += OnPacketReceived;
             this.Load += NewChatForm_Load;
-            picSearch.Paint += PicSearch_Paint;
 
             btnCreate.Click += BtnCreate_Click;
             btnCancel.Click += BtnCancel_Click;
@@ -55,31 +54,18 @@ namespace Messenger.Client
             }
         }
 
-        private void ApplyFuturisticStyle()
+        // Скругление углов формы (единый стиль)
+        private void SetRoundedRegion(Control ctrl, int radius)
         {
-            this.BackColor = Color.FromArgb(30, 30, 46);
-            this.ForeColor = Color.White;
-            panelMain.BackColor = Color.FromArgb(45, 45, 58);
-            panelHeader.BackColor = Color.FromArgb(20, 20, 30);
-            lblTitle.ForeColor = Color.FromArgb(0, 229, 255);
-            lblSubtitle.ForeColor = Color.FromArgb(180, 180, 200);
-            tabControl.BackColor = Color.FromArgb(45, 45, 58);
-            tabControl.ForeColor = Color.White;
-            txtSearch.BackColor = Color.FromArgb(60, 60, 80);
-            txtSearch.ForeColor = Color.White;
-            lstDepartments.BackColor = Color.FromArgb(60, 60, 80);
-            lstDepartments.ForeColor = Color.White;
-            tvPrivateUsers.BackColor = Color.FromArgb(60, 60, 80);
-            tvPrivateUsers.ForeColor = Color.White;
-            tvGroupUsers.BackColor = Color.FromArgb(60, 60, 80);
-            tvGroupUsers.ForeColor = Color.White;
-            txtChatName.BackColor = Color.FromArgb(60, 60, 80);
-            txtChatName.ForeColor = Color.White;
-            btnCreate.BackColor = Color.FromArgb(0, 229, 255);
-            btnCreate.ForeColor = Color.Black;
-            btnCancel.BackColor = Color.Transparent;
-            btnCancel.ForeColor = Color.FromArgb(0, 229, 255);
-            btnCancel.FlatAppearance.BorderColor = Color.FromArgb(0, 229, 255);
+            using (var path = new GraphicsPath())
+            {
+                path.AddArc(0, 0, radius, radius, 180, 90);
+                path.AddArc(ctrl.Width - radius, 0, radius, radius, 270, 90);
+                path.AddArc(ctrl.Width - radius, ctrl.Height - radius, radius, radius, 0, 90);
+                path.AddArc(0, ctrl.Height - radius, radius, radius, 90, 90);
+                path.CloseFigure();
+                ctrl.Region = new Region(path);
+            }
         }
 
         private void NewChatForm_Load(object sender, EventArgs e)
@@ -213,11 +199,8 @@ namespace Messenger.Client
         private void TvPrivateUsers_AfterSelect(object sender, TreeViewEventArgs e) => UpdateCreateButton();
         private void TvGroupUsers_AfterCheck(object sender, TreeViewEventArgs e)
         {
-            // Чтобы предотвратить рекурсию при программной установке флажков
             if (e.Action != TreeViewAction.Unknown)
-            {
                 UpdateCreateButton();
-            }
         }
         private void TxtChatName_TextChanged(object sender, EventArgs e) => UpdateCreateButton();
 
@@ -259,7 +242,7 @@ namespace Messenger.Client
             {
                 var selectedUsers = GetCheckedGroupUsers();
                 var participants = selectedUsers.Select(u => u.Id).ToList();
-                participants.Add(currentUserId); // добавляем себя
+                participants.Add(currentUserId);
                 networkClient.SendPacket(new NetworkPacket
                 {
                     Command = Shared.CommandType.CreateGroupChat,
@@ -270,17 +253,6 @@ namespace Messenger.Client
 
         private void BtnCancel_Click(object sender, EventArgs e) => Close();
 
-        private void PicSearch_Paint(object sender, PaintEventArgs e)
-        {
-            using (var pen = new Pen(Color.Gray, 2))
-            {
-                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                e.Graphics.DrawEllipse(pen, 2, 2, 12, 12);
-                e.Graphics.DrawLine(pen, 11, 11, 16, 16);
-            }
-        }
-
-        // Отписка от события при закрытии формы
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             networkClient.OnPacketReceived -= OnPacketReceived;
