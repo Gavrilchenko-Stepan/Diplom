@@ -130,7 +130,7 @@ namespace Messenger.Client
             this.panelTop.Dock = System.Windows.Forms.DockStyle.Top;
             this.panelTop.Location = new System.Drawing.Point(0, 0);
             this.panelTop.Name = "panelTop";
-            this.panelTop.Size = new System.Drawing.Size(1200, 96);
+            this.panelTop.Size = new System.Drawing.Size(1200, 100);
             this.panelTop.TabIndex = 2;
             this.panelTop.Paint += new System.Windows.Forms.PaintEventHandler(this.PanelTop_Paint);
             // 
@@ -190,7 +190,7 @@ namespace Messenger.Client
             this.btnNewChat.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnNewChat.Font = new System.Drawing.Font("Segoe UI", 9F);
             this.btnNewChat.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
-            this.btnNewChat.Location = new System.Drawing.Point(0, 0);
+            this.btnNewChat.Location = new System.Drawing.Point(1200, 0);
             this.btnNewChat.Name = "btnNewChat";
             this.btnNewChat.Size = new System.Drawing.Size(110, 36);
             this.btnNewChat.TabIndex = 5;
@@ -205,7 +205,7 @@ namespace Messenger.Client
             this.btnSettings.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnSettings.Font = new System.Drawing.Font("Segoe UI", 14F);
             this.btnSettings.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
-            this.btnSettings.Location = new System.Drawing.Point(1140, 30);
+            this.btnSettings.Location = new System.Drawing.Point(3340, 30);
             this.btnSettings.Name = "btnSettings";
             this.btnSettings.Size = new System.Drawing.Size(40, 36);
             this.btnSettings.TabIndex = 6;
@@ -242,9 +242,9 @@ namespace Messenger.Client
             this.panelLeft.Controls.Add(this.lstChats);
             this.panelLeft.Controls.Add(this.panelLeftFooter);
             this.panelLeft.Dock = System.Windows.Forms.DockStyle.Left;
-            this.panelLeft.Location = new System.Drawing.Point(0, 96);
+            this.panelLeft.Location = new System.Drawing.Point(0, 100);
             this.panelLeft.Name = "panelLeft";
-            this.panelLeft.Size = new System.Drawing.Size(350, 579);
+            this.panelLeft.Size = new System.Drawing.Size(350, 575);
             this.panelLeft.TabIndex = 1;
             // 
             // panelLeftHeader
@@ -346,7 +346,7 @@ namespace Messenger.Client
             this.panelLeftFooter.Controls.Add(this.lblTotalUsers);
             this.panelLeftFooter.Controls.Add(this.lblOnlineCount);
             this.panelLeftFooter.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.panelLeftFooter.Location = new System.Drawing.Point(0, 549);
+            this.panelLeftFooter.Location = new System.Drawing.Point(0, 545);
             this.panelLeftFooter.Name = "panelLeftFooter";
             this.panelLeftFooter.Size = new System.Drawing.Size(350, 30);
             this.panelLeftFooter.TabIndex = 2;
@@ -378,10 +378,10 @@ namespace Messenger.Client
             this.panelRight.Controls.Add(this.panelChatHeader);
             this.panelRight.Controls.Add(this.panelMessageInput);
             this.panelRight.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.panelRight.Location = new System.Drawing.Point(350, 96);
+            this.panelRight.Location = new System.Drawing.Point(350, 100);
             this.panelRight.Name = "panelRight";
             this.panelRight.Padding = new System.Windows.Forms.Padding(10);
-            this.panelRight.Size = new System.Drawing.Size(850, 579);
+            this.panelRight.Size = new System.Drawing.Size(850, 575);
             this.panelRight.TabIndex = 0;
             // 
             // lstMessages
@@ -395,7 +395,7 @@ namespace Messenger.Client
             this.lstMessages.Location = new System.Drawing.Point(10, 80);
             this.lstMessages.Name = "lstMessages";
             this.lstMessages.SelectionMode = System.Windows.Forms.SelectionMode.None;
-            this.lstMessages.Size = new System.Drawing.Size(830, 419);
+            this.lstMessages.Size = new System.Drawing.Size(830, 405);
             this.lstMessages.TabIndex = 1;
             // 
             // panelChatHeader
@@ -465,9 +465,9 @@ namespace Messenger.Client
             this.panelMessageInput.Controls.Add(this.btnSend);
             this.panelMessageInput.Controls.Add(this.lblEditingHint);
             this.panelMessageInput.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.panelMessageInput.Location = new System.Drawing.Point(10, 499);
+            this.panelMessageInput.Location = new System.Drawing.Point(10, 485);
             this.panelMessageInput.Name = "panelMessageInput";
-            this.panelMessageInput.Size = new System.Drawing.Size(830, 70);
+            this.panelMessageInput.Size = new System.Drawing.Size(830, 80);
             this.panelMessageInput.TabIndex = 2;
             // 
             // lblTyping
@@ -491,7 +491,7 @@ namespace Messenger.Client
             this.txtMessage.Location = new System.Drawing.Point(15, 16);
             this.txtMessage.Multiline = true;
             this.txtMessage.Name = "txtMessage";
-            this.txtMessage.Size = new System.Drawing.Size(655, 40);
+            this.txtMessage.Size = new System.Drawing.Size(655, 50);
             this.txtMessage.TabIndex = 0;
             // 
             // btnSend
@@ -502,7 +502,7 @@ namespace Messenger.Client
             this.btnSend.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnSend.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
             this.btnSend.ForeColor = System.Drawing.Color.Black;
-            this.btnSend.Location = new System.Drawing.Point(680, 10);
+            this.btnSend.Location = new System.Drawing.Point(679, 16);
             this.btnSend.Name = "btnSend";
             this.btnSend.Size = new System.Drawing.Size(140, 50);
             this.btnSend.TabIndex = 1;

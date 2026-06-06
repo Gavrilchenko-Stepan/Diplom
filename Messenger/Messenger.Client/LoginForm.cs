@@ -28,6 +28,8 @@ namespace Messenger.Client
             InitializeComponent();
             ApplyFuturisticStyle();
 
+            this.Load += (s, e) => SetRoundedRegion(this, 20);
+
             // --- Хранение в AppData ---
             string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             string configDir = Path.Combine(appData, "MessengerClient");
@@ -74,10 +76,6 @@ namespace Messenger.Client
             txtPassword.BackColor = Color.FromArgb(60, 60, 80);
             txtPassword.ForeColor = Color.White;
             txtPassword.BorderStyle = BorderStyle.FixedSingle;
-
-            panelLine1.BackColor = Color.FromArgb(0, 229, 255);
-            panelLine2.BackColor = Color.FromArgb(0, 229, 255);
-            panelLine3.BackColor = Color.FromArgb(0, 229, 255);
 
             btnLogin.BackColor = Color.FromArgb(0, 229, 255);
             btnLogin.ForeColor = Color.Black;
@@ -171,6 +169,19 @@ namespace Messenger.Client
             lblError.Text = message;
             lblError.Visible = true;
             lblStatus.Visible = false;
+        }
+
+        private void SetRoundedRegion(Control ctrl, int radius)
+        {
+            using (var path = new System.Drawing.Drawing2D.GraphicsPath())
+            {
+                path.AddArc(0, 0, radius, radius, 180, 90);
+                path.AddArc(ctrl.Width - radius, 0, radius, radius, 270, 90);
+                path.AddArc(ctrl.Width - radius, ctrl.Height - radius, radius, radius, 0, 90);
+                path.AddArc(0, ctrl.Height - radius, radius, radius, 90, 90);
+                path.CloseFigure();
+                ctrl.Region = new Region(path);
+            }
         }
     }
 }

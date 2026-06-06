@@ -21,6 +21,7 @@ namespace Messenger.Client
         public EditUserForm(User user, List<Department> depts, NetworkClient client)
         {
             InitializeComponent();
+            this.Load += (s, e) => SetRoundedRegion(this, 20);
             editingUser = user;
             departments = depts;
             networkClient = client;
@@ -111,6 +112,19 @@ namespace Messenger.Client
         {
             DialogResult = DialogResult.Cancel;
             Close();
+        }
+
+        private void SetRoundedRegion(Control ctrl, int radius)
+        {
+            using (var path = new System.Drawing.Drawing2D.GraphicsPath())
+            {
+                path.AddArc(0, 0, radius, radius, 180, 90);
+                path.AddArc(ctrl.Width - radius, 0, radius, radius, 270, 90);
+                path.AddArc(ctrl.Width - radius, ctrl.Height - radius, radius, radius, 0, 90);
+                path.AddArc(0, ctrl.Height - radius, radius, radius, 90, 90);
+                path.CloseFigure();
+                ctrl.Region = new Region(path);
+            }
         }
     }
 }

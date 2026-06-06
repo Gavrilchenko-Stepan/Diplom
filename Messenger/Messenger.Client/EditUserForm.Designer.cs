@@ -71,17 +71,17 @@ namespace Messenger.Client
             this.panelMain.Dock = System.Windows.Forms.DockStyle.Fill;
             this.panelMain.Location = new System.Drawing.Point(0, 0);
             this.panelMain.Name = "panelMain";
-            this.panelMain.Padding = new System.Windows.Forms.Padding(20);
-            this.panelMain.Size = new System.Drawing.Size(400, 400);
+            this.panelMain.Padding = new System.Windows.Forms.Padding(24);
+            this.panelMain.Size = new System.Drawing.Size(480, 460);
             this.panelMain.TabIndex = 0;
             // 
             // lblTitle
             // 
-            this.lblTitle.Font = new System.Drawing.Font("Segoe UI", 14F, System.Drawing.FontStyle.Bold);
+            this.lblTitle.Font = new System.Drawing.Font("Segoe UI", 16F, System.Drawing.FontStyle.Bold);
             this.lblTitle.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
-            this.lblTitle.Location = new System.Drawing.Point(20, 20);
+            this.lblTitle.Location = new System.Drawing.Point(24, 20);
             this.lblTitle.Name = "lblTitle";
-            this.lblTitle.Size = new System.Drawing.Size(360, 25);
+            this.lblTitle.Size = new System.Drawing.Size(432, 35);
             this.lblTitle.TabIndex = 0;
             this.lblTitle.Text = "Редактирование пользователя";
             this.lblTitle.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -91,7 +91,7 @@ namespace Messenger.Client
             this.lblUsername.AutoSize = true;
             this.lblUsername.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
             this.lblUsername.ForeColor = System.Drawing.Color.White;
-            this.lblUsername.Location = new System.Drawing.Point(20, 60);
+            this.lblUsername.Location = new System.Drawing.Point(24, 75);
             this.lblUsername.Name = "lblUsername";
             this.lblUsername.Size = new System.Drawing.Size(46, 15);
             this.lblUsername.TabIndex = 1;
@@ -102,9 +102,9 @@ namespace Messenger.Client
             this.txtUsername.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(60)))), ((int)(((byte)(60)))), ((int)(((byte)(80)))));
             this.txtUsername.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.txtUsername.ForeColor = System.Drawing.Color.White;
-            this.txtUsername.Location = new System.Drawing.Point(20, 80);
+            this.txtUsername.Location = new System.Drawing.Point(24, 95);
             this.txtUsername.Name = "txtUsername";
-            this.txtUsername.Size = new System.Drawing.Size(360, 23);
+            this.txtUsername.Size = new System.Drawing.Size(432, 23);
             this.txtUsername.TabIndex = 0;
             // 
             // lblPassword
@@ -112,7 +112,7 @@ namespace Messenger.Client
             this.lblPassword.AutoSize = true;
             this.lblPassword.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
             this.lblPassword.ForeColor = System.Drawing.Color.White;
-            this.lblPassword.Location = new System.Drawing.Point(20, 110);
+            this.lblPassword.Location = new System.Drawing.Point(24, 135);
             this.lblPassword.Name = "lblPassword";
             this.lblPassword.Size = new System.Drawing.Size(53, 15);
             this.lblPassword.TabIndex = 2;
@@ -123,9 +123,9 @@ namespace Messenger.Client
             this.txtPassword.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(60)))), ((int)(((byte)(60)))), ((int)(((byte)(80)))));
             this.txtPassword.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.txtPassword.ForeColor = System.Drawing.Color.White;
-            this.txtPassword.Location = new System.Drawing.Point(20, 130);
+            this.txtPassword.Location = new System.Drawing.Point(24, 155);
             this.txtPassword.Name = "txtPassword";
-            this.txtPassword.Size = new System.Drawing.Size(360, 23);
+            this.txtPassword.Size = new System.Drawing.Size(432, 23);
             this.txtPassword.TabIndex = 1;
             this.txtPassword.UseSystemPasswordChar = true;
             // 
@@ -134,7 +134,7 @@ namespace Messenger.Client
             this.lblFullName.AutoSize = true;
             this.lblFullName.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
             this.lblFullName.ForeColor = System.Drawing.Color.White;
-            this.lblFullName.Location = new System.Drawing.Point(20, 160);
+            this.lblFullName.Location = new System.Drawing.Point(24, 195);
             this.lblFullName.Name = "lblFullName";
             this.lblFullName.Size = new System.Drawing.Size(29, 15);
             this.lblFullName.TabIndex = 3;
@@ -145,9 +145,9 @@ namespace Messenger.Client
             this.txtFullName.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(60)))), ((int)(((byte)(60)))), ((int)(((byte)(80)))));
             this.txtFullName.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.txtFullName.ForeColor = System.Drawing.Color.White;
-            this.txtFullName.Location = new System.Drawing.Point(20, 180);
+            this.txtFullName.Location = new System.Drawing.Point(24, 215);
             this.txtFullName.Name = "txtFullName";
-            this.txtFullName.Size = new System.Drawing.Size(360, 23);
+            this.txtFullName.Size = new System.Drawing.Size(432, 23);
             this.txtFullName.TabIndex = 2;
             // 
             // lblDepartment
@@ -155,7 +155,7 @@ namespace Messenger.Client
             this.lblDepartment.AutoSize = true;
             this.lblDepartment.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
             this.lblDepartment.ForeColor = System.Drawing.Color.White;
-            this.lblDepartment.Location = new System.Drawing.Point(20, 210);
+            this.lblDepartment.Location = new System.Drawing.Point(24, 255);
             this.lblDepartment.Name = "lblDepartment";
             this.lblDepartment.Size = new System.Drawing.Size(45, 15);
             this.lblDepartment.TabIndex = 4;
@@ -167,9 +167,9 @@ namespace Messenger.Client
             this.cmbDepartment.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cmbDepartment.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.cmbDepartment.ForeColor = System.Drawing.Color.White;
-            this.cmbDepartment.Location = new System.Drawing.Point(20, 230);
+            this.cmbDepartment.Location = new System.Drawing.Point(24, 275);
             this.cmbDepartment.Name = "cmbDepartment";
-            this.cmbDepartment.Size = new System.Drawing.Size(360, 23);
+            this.cmbDepartment.Size = new System.Drawing.Size(432, 23);
             this.cmbDepartment.TabIndex = 3;
             // 
             // lblPosition
@@ -177,7 +177,7 @@ namespace Messenger.Client
             this.lblPosition.AutoSize = true;
             this.lblPosition.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
             this.lblPosition.ForeColor = System.Drawing.Color.White;
-            this.lblPosition.Location = new System.Drawing.Point(20, 260);
+            this.lblPosition.Location = new System.Drawing.Point(24, 315);
             this.lblPosition.Name = "lblPosition";
             this.lblPosition.Size = new System.Drawing.Size(75, 15);
             this.lblPosition.TabIndex = 5;
@@ -188,16 +188,16 @@ namespace Messenger.Client
             this.txtPosition.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(60)))), ((int)(((byte)(60)))), ((int)(((byte)(80)))));
             this.txtPosition.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.txtPosition.ForeColor = System.Drawing.Color.White;
-            this.txtPosition.Location = new System.Drawing.Point(20, 280);
+            this.txtPosition.Location = new System.Drawing.Point(24, 335);
             this.txtPosition.Name = "txtPosition";
-            this.txtPosition.Size = new System.Drawing.Size(360, 23);
+            this.txtPosition.Size = new System.Drawing.Size(432, 23);
             this.txtPosition.TabIndex = 4;
             // 
             // chkIsAdmin
             // 
             this.chkIsAdmin.AutoSize = true;
             this.chkIsAdmin.ForeColor = System.Drawing.Color.White;
-            this.chkIsAdmin.Location = new System.Drawing.Point(20, 320);
+            this.chkIsAdmin.Location = new System.Drawing.Point(24, 375);
             this.chkIsAdmin.Name = "chkIsAdmin";
             this.chkIsAdmin.Size = new System.Drawing.Size(113, 19);
             this.chkIsAdmin.TabIndex = 5;
@@ -211,9 +211,9 @@ namespace Messenger.Client
             this.btnSave.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnSave.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
             this.btnSave.ForeColor = System.Drawing.Color.Black;
-            this.btnSave.Location = new System.Drawing.Point(120, 360);
+            this.btnSave.Location = new System.Drawing.Point(209, 410);
             this.btnSave.Name = "btnSave";
-            this.btnSave.Size = new System.Drawing.Size(100, 30);
+            this.btnSave.Size = new System.Drawing.Size(110, 34);
             this.btnSave.TabIndex = 6;
             this.btnSave.Text = "Сохранить";
             this.btnSave.UseVisualStyleBackColor = false;
@@ -226,9 +226,9 @@ namespace Messenger.Client
             this.btnCancel.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnCancel.Font = new System.Drawing.Font("Segoe UI", 10F);
             this.btnCancel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
-            this.btnCancel.Location = new System.Drawing.Point(230, 360);
+            this.btnCancel.Location = new System.Drawing.Point(343, 410);
             this.btnCancel.Name = "btnCancel";
-            this.btnCancel.Size = new System.Drawing.Size(100, 30);
+            this.btnCancel.Size = new System.Drawing.Size(110, 34);
             this.btnCancel.TabIndex = 7;
             this.btnCancel.Text = "Отмена";
             this.btnCancel.UseVisualStyleBackColor = false;
@@ -239,7 +239,7 @@ namespace Messenger.Client
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(46)))));
-            this.ClientSize = new System.Drawing.Size(400, 400);
+            this.ClientSize = new System.Drawing.Size(480, 460);
             this.Controls.Add(this.panelMain);
             this.Font = new System.Drawing.Font("Segoe UI", 9F);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;

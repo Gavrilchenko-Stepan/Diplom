@@ -46,6 +46,12 @@ namespace Messenger.Client
         {
             InitializeComponent();
 
+            this.Resize += (sender, e) =>
+            {
+                Console.WriteLine($"panelTop.Width = {panelTop.Width}, ClientSize.Width = {this.ClientSize.Width}");
+                UpdateButtonsPosition();
+            };
+
             this.Shown += (s, e) => UpdateButtonsPosition();
 
             picOnlineIndicator.BringToFront();
@@ -121,6 +127,8 @@ namespace Messenger.Client
             lstMessages.MeasureItem += LstMessages_MeasureItem;
             lstMessages.DrawItem += LstMessages_DrawItem;
             lstMessages.Resize += (s, e) => lstMessages.Refresh();
+            lstMessages.KeyDown += LstMessages_KeyDown;
+            lstMessages.MouseDown += LstMessages_MouseDown;
 
 
             // Подписка на события
@@ -945,7 +953,10 @@ namespace Messenger.Client
             {
                 string last = chat.LastMessage.Length > 35 ? chat.LastMessage.Substring(0, 32) + "..." : chat.LastMessage;
                 using (var font = new Font("Segoe UI", 9))
-                    e.Graphics.DrawString(last, font, Brushes.Gray, x, yMessage);
+                using (var brush = new SolidBrush(Color.FromArgb(180, 180, 200))) // светло-серый
+                {
+                    e.Graphics.DrawString(last, font, brush, x, yMessage);
+                }
             }
 
             // Время последнего сообщения
@@ -954,7 +965,10 @@ namespace Messenger.Client
                 string timeStr = chat.LastMessageTime.ToString("HH:mm");
                 SizeF timeSize = e.Graphics.MeasureString(timeStr, new Font("Segoe UI", 8));
                 float timeX = e.Bounds.Right - timeSize.Width - 20;
-                e.Graphics.DrawString(timeStr, new Font("Segoe UI", 8), Brushes.Gray, timeX, yTitle);
+                using (var brush = new SolidBrush(Color.FromArgb(180, 180, 200)))
+                {
+                    e.Graphics.DrawString(timeStr, new Font("Segoe UI", 8), brush, timeX, yTitle);
+                }
             }
 
             // Непрочитанные сообщения
@@ -980,26 +994,24 @@ namespace Messenger.Client
         // ========== Отрисовка сообщений ==========
         private void LstMessages_DrawItem(object sender, DrawItemEventArgs e)
         {
-            if (e.Index < 0) return;
-            if (currentUser == null) return;
-
+            if (e.Index < 0 || currentUser == null) return;
             object item = lstMessages.Items[e.Index];
             if (item == null) return;
 
-            // Разделитель даты (строка)
+            // Заливаем фон строки цветом панели (чтобы не было артефактов)
+            using (var bgBrush = new SolidBrush(Color.FromArgb(30, 30, 46)))
+                e.Graphics.FillRectangle(bgBrush, e.Bounds);
+
+            // Разделитель даты
             if (item is string dateStr)
             {
-                // Рисуем дату на нейтральном фоне
                 using (var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
                 using (var brush = new SolidBrush(Color.FromArgb(180, 180, 200)))
-                {
                     e.Graphics.DrawString(dateStr, dateFont, brush, e.Bounds, sf);
-                }
                 return;
             }
 
             if (!(item is Shared.Message msg)) return;
-
             bool isMy = msg.SenderId == currentUser.Id;
             bool isSelected = selectedMessageIndices.Contains(e.Index);
 
@@ -1007,20 +1019,15 @@ namespace Messenger.Client
             const int padding = 10;
             int x = isMy ? e.Bounds.Right - maxWidth - 20 : e.Bounds.Left + 20;
             int textWidth = maxWidth - 2 * padding;
-
             Rectangle bubbleRect = new Rectangle(x, e.Bounds.Y + 2, maxWidth, e.Bounds.Height - 4);
 
-            // Цвета пузыря в зависимости от выделения
-            Color bgColor;
-            if (isMy)
-            {
-                bgColor = isSelected ? Color.FromArgb(0, 120, 215) : Color.FromArgb(0, 229, 255, 80);
-            }
-            else
-            {
-                bgColor = isSelected ? Color.FromArgb(0, 100, 200) : Color.FromArgb(60, 60, 80);
-            }
-            Color borderColor = isSelected ? Color.White : (isMy ? Color.FromArgb(0, 229, 255) : Color.Gray);
+            // Цвет пузыря (фона)
+            Color bgColor = isMy ? Color.FromArgb(60, 80, 120) : Color.FromArgb(50, 50, 65);
+            // Если выделено – добавим золотой полупрозрачный слой поверх
+            if (isSelected)
+                bgColor = Color.FromArgb(200, 255, 215, 0); // золотистый
+
+            Color borderColor = isSelected ? Color.FromArgb(255, 230, 100) : Color.White;
 
             using (var path = GetRoundedRect(bubbleRect, 10))
             using (var brush = new SolidBrush(bgColor))
@@ -1031,33 +1038,23 @@ namespace Messenger.Client
             }
 
             int currentY = e.Bounds.Y + 5;
-
             // Имя отправителя
-            string senderDisplay = string.IsNullOrEmpty(msg.SenderDepartment)
-                ? msg.SenderName
-                : $"{msg.SenderName} ({msg.SenderDepartment})";
+            string senderDisplay = string.IsNullOrEmpty(msg.SenderDepartment) ? msg.SenderName : $"{msg.SenderName} ({msg.SenderDepartment})";
             using (var brush = new SolidBrush(Color.White))
-            {
-                e.Graphics.DrawString(senderDisplay, messageSenderFont,
-                    brush, new RectangleF(x + padding, currentY, textWidth, 100));
-            }
+                e.Graphics.DrawString(senderDisplay, messageSenderFont, brush, new RectangleF(x + padding, currentY, textWidth, 100));
             SizeF senderSize = e.Graphics.MeasureString(senderDisplay, messageSenderFont, textWidth);
             currentY += (int)senderSize.Height + 5;
 
-            // Текст сообщения
+            // Текст
             using (var brush = new SolidBrush(Color.White))
-            {
-                e.Graphics.DrawString(msg.Text, messageTextFont,
-                    brush, new RectangleF(x + padding, currentY, textWidth, 1000));
-            }
+                e.Graphics.DrawString(msg.Text, messageTextFont, brush, new RectangleF(x + padding, currentY, textWidth, 1000));
             SizeF textSize = e.Graphics.MeasureString(msg.Text, messageTextFont, textWidth);
             currentY += (int)textSize.Height + 5;
 
             // Время
             string timeStr = msg.SentAt.ToString("HH:mm");
-            if (msg.EditedAt.HasValue)
-                timeStr += " (ред.)";
-            using (var brush = new SolidBrush(Color.Gray))
+            if (msg.EditedAt.HasValue) timeStr += " (ред.)";
+            using (var brush = new SolidBrush(Color.White))
             {
                 SizeF timeSize = e.Graphics.MeasureString(timeStr, messageTimeFont);
                 float timeX = bubbleRect.Right - padding - timeSize.Width;
@@ -1116,7 +1113,7 @@ namespace Messenger.Client
                             lblLastSeen.Text = $"был(а) вчера в {other.LastSeen.Value:HH:mm}";
                         else
                             lblLastSeen.Text = $"был(а) {other.LastSeen.Value:dd.MM.yyyy}";
-                        lblLastSeen.ForeColor = Color.Gray;
+                        lblLastSeen.ForeColor = Color.White;
                     }
                     else
                         lblLastSeen.Text = "";
@@ -1144,55 +1141,30 @@ namespace Messenger.Client
 
         private void LstMessages_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Control && e.KeyCode == Keys.A)
-            {
-                selectedMessageIndices.Clear();
-                for (int i = 0; i < lstMessages.Items.Count; i++)
-                    if (lstMessages.Items[i] is Shared.Message)
-                        selectedMessageIndices.Add(i);
-                lstMessages.Invalidate();
-                e.SuppressKeyPress = true;
-                e.Handled = true;
-                return;
-            }
-
-            // Delete – удалить выделенные сообщения
             if (e.KeyCode == Keys.Delete && selectedMessageIndices.Count > 0)
             {
+                // Получаем выделенные сообщения
                 var selectedMessages = selectedMessageIndices
                     .Select(i => lstMessages.Items[i] as Shared.Message)
                     .Where(m => m != null)
                     .ToList();
 
-                if (selectedMessages.Count == 0)
-                {
-                    MessageBox.Show("Выберите хотя бы одно сообщение.", "Подсказка",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    e.Handled = true;
-                    return;
-                }
+                if (selectedMessages.Count == 0) return;
 
-                // Проверка прав: только свои сообщения или админ
-                bool canDeleteAll = selectedMessages.All(msg => msg.SenderId == currentUser.Id || currentUser.IsAdmin);
-                if (!canDeleteAll)
+                // Проверка прав
+                if (!selectedMessages.All(m => m.SenderId == currentUser.Id || currentUser.IsAdmin))
                 {
                     MessageBox.Show("Вы можете удалять только свои сообщения.", "Доступ запрещён",
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    e.Handled = true;
                     return;
                 }
 
-                // Подтверждение удаления
                 string confirmMsg = selectedMessages.Count == 1
                     ? "Удалить выбранное сообщение?"
                     : $"Удалить {selectedMessages.Count} сообщений?";
                 if (MessageBox.Show(confirmMsg, "Подтверждение", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
-                {
-                    e.Handled = true;
                     return;
-                }
 
-                // Отправляем команду на удаление для каждого сообщения
                 foreach (var msg in selectedMessages)
                 {
                     networkClient.SendPacket(new NetworkPacket
@@ -1201,16 +1173,14 @@ namespace Messenger.Client
                         Data = msg.Id
                     });
                 }
-
                 e.Handled = true;
             }
-            // Escape – сброс выделения
             else if (e.KeyCode == Keys.Escape)
             {
-                lstMessages.ClearSelected();
-                lstMessages.SelectedIndex = -1;
+                selectedMessageIndices.Clear();
+                lastSelectedIndex = -1;
+                lstMessages.Invalidate();
                 e.Handled = true;
-                txtMessage.Focus();
             }
         }
 
@@ -1245,6 +1215,10 @@ namespace Messenger.Client
             btnSend.BackColor = Color.FromArgb(0, 229, 255);
             btnSend.ForeColor = Color.Black;
             if (lblEditingHint != null) lblEditingHint.Visible = false;
+
+            txtMessage.Height = 40;
+            panelMessageInput.Height = 70;
+            btnSend.Top = (70 - btnSend.Height) / 2;
         }
 
         private void SendOrEdit()
@@ -1290,6 +1264,10 @@ namespace Messenger.Client
                     Data = msg
                 });
                 txtMessage.Clear();
+
+                txtMessage.Height = 40;
+                panelMessageInput.Height = 70;
+                btnSend.Top = (70 - btnSend.Height) / 2;
             }
         }
 
@@ -1395,8 +1373,34 @@ namespace Messenger.Client
             }
         }
 
+        private void DeleteSelectedMessages()
+        {
+            var selectedMessages = selectedMessageIndices
+                .Select(i => lstMessages.Items[i] as Shared.Message)
+                .Where(m => m != null)
+                .ToList();
+            if (selectedMessages.Count == 0) return;
+            if (!selectedMessages.All(m => m.SenderId == currentUser.Id || currentUser.IsAdmin))
+            {
+                MessageBox.Show("Вы можете удалять только свои сообщения.");
+                return;
+            }
+            if (MessageBox.Show($"Удалить {selectedMessages.Count} сообщений?", "Подтверждение",
+                MessageBoxButtons.YesNo) != DialogResult.Yes) return;
+            foreach (var msg in selectedMessages)
+                networkClient.SendPacket(new NetworkPacket { Command = Shared.CommandType.DeleteMessage, Data = msg.Id });
+        }
+
         private void TxtMessage_TextChanged(object sender, EventArgs e)
         {
+            if (string.IsNullOrWhiteSpace(txtMessage.Text))
+            {
+                txtMessage.Height = 40;
+                panelMessageInput.Height = 70;
+                btnSend.Top = (70 - btnSend.Height) / 2;
+                return;
+            }
+
             // Вычисляем требуемую высоту поля с учётом переноса текста
             int width = txtMessage.ClientSize.Width;
             if (width <= 0) return;
@@ -1446,60 +1450,104 @@ namespace Messenger.Client
 
         private void LstMessages_MouseDown(object sender, MouseEventArgs e)
         {
+            lstMessages.Focus();
+
             int index = lstMessages.IndexFromPoint(e.Location);
-            bool clickOnEmpty = false;
+            bool isMessage = (index >= 0 && lstMessages.Items[index] is Shared.Message);
 
-            if (index == -1)
-                clickOnEmpty = true;
-            else
+            // Левая кнопка: логика выделения
+            if (e.Button == MouseButtons.Left)
             {
-                Rectangle rect = lstMessages.GetItemRectangle(index);
-                if (!rect.Contains(e.Location))
-                    clickOnEmpty = true;
-            }
-
-            // Клик на пустом месте или на разделителе даты -> сброс выделения
-            if (clickOnEmpty || (index >= 0 && lstMessages.Items[index] is string))
-            {
-                selectedMessageIndices.Clear();
-                lastSelectedIndex = -1;
-                lstMessages.Invalidate();
-                return;
-            }
-
-            // Клик на сообщении
-            if (index < 0 || !(lstMessages.Items[index] is Shared.Message))
-                return;
-
-            if (ModifierKeys.HasFlag(Keys.Control))
-            {
-                // Ctrl: инвертируем выделение текущего сообщения
-                if (selectedMessageIndices.Contains(index))
-                    selectedMessageIndices.Remove(index);
-                else
-                    selectedMessageIndices.Add(index);
-                lastSelectedIndex = index;
-            }
-            else if (ModifierKeys.HasFlag(Keys.Shift) && lastSelectedIndex != -1)
-            {
-                // Shift: выделяем диапазон от lastSelectedIndex до index
-                int start = Math.Min(lastSelectedIndex, index);
-                int end = Math.Max(lastSelectedIndex, index);
-                for (int i = start; i <= end; i++)
+                if (!isMessage)
                 {
-                    if (lstMessages.Items[i] is Shared.Message && !selectedMessageIndices.Contains(i))
-                        selectedMessageIndices.Add(i);
+                    selectedMessageIndices.Clear();
+                    lastSelectedIndex = -1;
+                    lstMessages.Invalidate();
+                    return;
                 }
-                lastSelectedIndex = index;
+
+                if (ModifierKeys.HasFlag(Keys.Control))
+                {
+                    if (selectedMessageIndices.Contains(index))
+                        selectedMessageIndices.Remove(index);
+                    else
+                        selectedMessageIndices.Add(index);
+                    lastSelectedIndex = index;
+                }
+                else if (ModifierKeys.HasFlag(Keys.Shift) && lastSelectedIndex != -1)
+                {
+                    int start = Math.Min(lastSelectedIndex, index);
+                    int end = Math.Max(lastSelectedIndex, index);
+                    selectedMessageIndices.Clear();
+                    for (int i = start; i <= end; i++)
+                        if (lstMessages.Items[i] is Shared.Message)
+                            selectedMessageIndices.Add(i);
+                    lastSelectedIndex = index;
+                }
+                else
+                {
+                    selectedMessageIndices.Clear();
+                    selectedMessageIndices.Add(index);
+                    lastSelectedIndex = index;
+                }
+                lstMessages.Invalidate();
             }
-            else
+            // Правая кнопка: выделяем сообщение под курсором (если нужно) и показываем меню
+            else if (e.Button == MouseButtons.Right)
             {
-                // Без модификаторов: сбрасываем всё и выделяем только текущее сообщение
-                selectedMessageIndices.Clear();
-                selectedMessageIndices.Add(index);
-                lastSelectedIndex = index;
+                if (isMessage)
+                {
+                    // Если сообщение ещё не выделено – выделяем его одно
+                    if (!selectedMessageIndices.Contains(index))
+                    {
+                        selectedMessageIndices.Clear();
+                        selectedMessageIndices.Add(index);
+                        lastSelectedIndex = index;
+                        lstMessages.Invalidate();
+                    }
+                    // Показываем контекстное меню
+                    ShowContextMenu(e.Location);
+                }
             }
-            lstMessages.Invalidate();
+        }
+
+        private void ShowContextMenu(Point location)
+        {
+            var selectedMsgs = selectedMessageIndices
+                .Select(i => lstMessages.Items[i] as Shared.Message)
+                .Where(m => m != null)
+                .ToList();
+
+            if (selectedMsgs.Count == 0) return;
+
+            var cms = new ContextMenuStrip();
+
+            // Копировать
+            cms.Items.Add("📋 Копировать текст", null, (s, e) =>
+            {
+                var text = string.Join(Environment.NewLine, selectedMsgs.Select(m => m.Text));
+                Clipboard.SetText(text);
+            });
+
+            // Редактировать (только одно сообщение и есть права)
+            if (selectedMsgs.Count == 1)
+            {
+                var msg = selectedMsgs[0];
+                if (msg.SenderId == currentUser.Id || currentUser.IsAdmin)
+                {
+                    cms.Items.Add("✏ Редактировать", null, (s, e) => StartEditingMessage(msg));
+                }
+            }
+
+            // Удалить (если все выделенные – свои или админ)
+            bool canDelete = selectedMsgs.All(m => m.SenderId == currentUser.Id || currentUser.IsAdmin);
+            if (canDelete)
+            {
+                string deleteText = selectedMsgs.Count == 1 ? "🗑 Удалить" : $"🗑 Удалить ({selectedMsgs.Count})";
+                cms.Items.Add(deleteText, null, (s, e) => DeleteSelectedMessages());
+            }
+
+            cms.Show(lstMessages, location);
         }
 
         private void BtnViewParticipants_Click(object sender, EventArgs e)
