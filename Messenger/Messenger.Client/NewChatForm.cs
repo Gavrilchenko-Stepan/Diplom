@@ -18,7 +18,6 @@ namespace Messenger.Client
         private int currentUserId;
         private string currentDepartment;
         private NetworkClient networkClient;
-        private List<Department> departments = new List<Department>();
         private List<User> availableUsers = new List<User>();
 
         public NewChatForm(int userId, string department, NetworkClient client, bool isAdmin)
@@ -33,25 +32,11 @@ namespace Messenger.Client
 
             btnCreate.Click += BtnCreate_Click;
             btnCancel.Click += BtnCancel_Click;
-            lstDepartments.SelectedIndexChanged += LstDepartments_SelectedIndexChanged;
             tvPrivateUsers.NodeMouseDoubleClick += TvPrivateUsers_NodeMouseDoubleClick;
             tvPrivateUsers.AfterSelect += TvPrivateUsers_AfterSelect;
             tvGroupUsers.AfterCheck += TvGroupUsers_AfterCheck;
             txtChatName.TextChanged += TxtChatName_TextChanged;
             tabControl.SelectedIndexChanged += TabControl_SelectedIndexChanged;
-
-            // Если пользователь не админ – удаляем вкладку "Отдел"
-            if (!isAdmin)
-            {
-                for (int i = 0; i < tabControl.TabPages.Count; i++)
-                {
-                    if (tabControl.TabPages[i].Text == "Отдел")
-                    {
-                        tabControl.TabPages.RemoveAt(i);
-                        break;
-                    }
-                }
-            }
         }
 
         // Скругление углов формы (единый стиль)
@@ -70,7 +55,6 @@ namespace Messenger.Client
 
         private void NewChatForm_Load(object sender, EventArgs e)
         {
-            networkClient.SendPacket(new NetworkPacket { Command = Shared.CommandType.GetDepartments });
             networkClient.SendPacket(new NetworkPacket { Command = Shared.CommandType.GetAvailableUsers, Data = currentUserId });
         }
 
@@ -88,12 +72,6 @@ namespace Messenger.Client
             {
                 switch (packet.Command)
                 {
-                    case Shared.CommandType.DepartmentsList:
-                        var jsonDept = (JsonElement)packet.Data;
-                        string json = jsonDept.GetRawText();
-                        departments = JsonSerializer.Deserialize<List<Department>>(json);
-                        UpdateDepartmentsList();
-                        break;
                     case Shared.CommandType.AvailableUsersList:
                         var jsonUsers = (JsonElement)packet.Data;
                         string usersJson = jsonUsers.GetRawText();
@@ -110,16 +88,6 @@ namespace Messenger.Client
             {
                 MessageBox.Show($"Ошибка обработки пакета: {ex.Message}");
             }
-        }
-
-        private void UpdateDepartmentsList()
-        {
-            lstDepartments.Items.Clear();
-            foreach (var dept in departments.Where(d => d.Name != currentDepartment))
-                lstDepartments.Items.Add(dept);
-            if (lstDepartments.Items.Count > 0)
-                lstDepartments.SelectedIndex = 0;
-            UpdateCreateButton();
         }
 
         private void UpdateUsersList()
@@ -172,9 +140,7 @@ namespace Messenger.Client
 
         private void UpdateCreateButton()
         {
-            if (tabControl.SelectedTab == tabDepartment)
-                btnCreate.Enabled = lstDepartments.SelectedItem != null;
-            else if (tabControl.SelectedTab == tabPrivate)
+            if (tabControl.SelectedTab == tabPrivate)
                 btnCreate.Enabled = tvPrivateUsers.SelectedNode?.Tag is User;
             else // tabGroup
                 btnCreate.Enabled = !string.IsNullOrWhiteSpace(txtChatName.Text) && GetCheckedGroupUsers().Count > 0;
@@ -218,19 +184,7 @@ namespace Messenger.Client
 
         private void BtnCreate_Click(object sender, EventArgs e)
         {
-            if (tabControl.SelectedTab == tabDepartment && lstDepartments.SelectedItem != null)
-            {
-                var dept = (Department)lstDepartments.SelectedItem;
-                var participants = availableUsers.Where(u => u.DepartmentId == dept.Id).Select(u => u.Id).ToList();
-                if (!participants.Contains(currentUserId))
-                    participants.Add(currentUserId);
-                networkClient.SendPacket(new NetworkPacket
-                {
-                    Command = Shared.CommandType.CreateGroupChat,
-                    Data = new { name = dept.Name, participants }
-                });
-            }
-            else if (tabControl.SelectedTab == tabPrivate && tvPrivateUsers.SelectedNode?.Tag is User selectedUser)
+            if (tabControl.SelectedTab == tabPrivate && tvPrivateUsers.SelectedNode?.Tag is User selectedUser)
             {
                 networkClient.SendPacket(new NetworkPacket
                 {
@@ -238,6 +192,7 @@ namespace Messenger.Client
                     Data = new { otherUserId = selectedUser.Id }
                 });
             }
+            // Групповой чат
             else if (tabControl.SelectedTab == tabGroup)
             {
                 var selectedUsers = GetCheckedGroupUsers();

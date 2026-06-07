@@ -11,12 +11,8 @@ namespace Messenger.Client
         private Label lblTitle;
         private Label lblSubtitle;
         private TabControl tabControl;
-        private TabPage tabDepartment;
         private TabPage tabPrivate;
         private TabPage tabGroup;
-        private TextBox txtSearch;
-        private Label lblSearchIcon;
-        private ListBox lstDepartments;
         private TreeView tvPrivateUsers;
         private TreeView tvGroupUsers;
         private Label lblChatName;
@@ -40,10 +36,6 @@ namespace Messenger.Client
             this.lblTitle = new System.Windows.Forms.Label();
             this.lblSubtitle = new System.Windows.Forms.Label();
             this.tabControl = new System.Windows.Forms.TabControl();
-            this.tabDepartment = new System.Windows.Forms.TabPage();
-            this.lblSearchIcon = new System.Windows.Forms.Label();
-            this.txtSearch = new System.Windows.Forms.TextBox();
-            this.lstDepartments = new System.Windows.Forms.ListBox();
             this.tabPrivate = new System.Windows.Forms.TabPage();
             this.tvPrivateUsers = new System.Windows.Forms.TreeView();
             this.tabGroup = new System.Windows.Forms.TabPage();
@@ -55,7 +47,6 @@ namespace Messenger.Client
             this.panelMain.SuspendLayout();
             this.panelHeader.SuspendLayout();
             this.tabControl.SuspendLayout();
-            this.tabDepartment.SuspendLayout();
             this.tabPrivate.SuspendLayout();
             this.tabGroup.SuspendLayout();
             this.SuspendLayout();
@@ -109,7 +100,6 @@ namespace Messenger.Client
             // 
             // tabControl
             // 
-            this.tabControl.Controls.Add(this.tabDepartment);
             this.tabControl.Controls.Add(this.tabPrivate);
             this.tabControl.Controls.Add(this.tabGroup);
             this.tabControl.Font = new System.Drawing.Font("Segoe UI", 10F);
@@ -118,58 +108,6 @@ namespace Messenger.Client
             this.tabControl.SelectedIndex = 0;
             this.tabControl.Size = new System.Drawing.Size(532, 420);
             this.tabControl.TabIndex = 1;
-            // 
-            // tabDepartment
-            // 
-            this.tabDepartment.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(45)))), ((int)(((byte)(58)))));
-            this.tabDepartment.Controls.Add(this.lblSearchIcon);
-            this.tabDepartment.Controls.Add(this.txtSearch);
-            this.tabDepartment.Controls.Add(this.lstDepartments);
-            this.tabDepartment.Location = new System.Drawing.Point(4, 26);
-            this.tabDepartment.Name = "tabDepartment";
-            this.tabDepartment.Padding = new System.Windows.Forms.Padding(15);
-            this.tabDepartment.Size = new System.Drawing.Size(524, 390);
-            this.tabDepartment.TabIndex = 0;
-            this.tabDepartment.Text = "Отдел";
-            // 
-            // lblSearchIcon
-            // 
-            this.lblSearchIcon.AutoSize = true;
-            this.lblSearchIcon.BackColor = System.Drawing.Color.Transparent;
-            this.lblSearchIcon.Font = new System.Drawing.Font("Segoe UI Emoji", 11F);
-            this.lblSearchIcon.ForeColor = System.Drawing.Color.Gray;
-            this.lblSearchIcon.Location = new System.Drawing.Point(461, 20);
-            this.lblSearchIcon.Name = "lblSearchIcon";
-            this.lblSearchIcon.Size = new System.Drawing.Size(30, 20);
-            this.lblSearchIcon.TabIndex = 2;
-            this.lblSearchIcon.Text = "🔍";
-            this.lblSearchIcon.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            // 
-            // txtSearch
-            // 
-            this.txtSearch.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(60)))), ((int)(((byte)(60)))), ((int)(((byte)(80)))));
-            this.txtSearch.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.txtSearch.Font = new System.Drawing.Font("Segoe UI", 10F);
-            this.txtSearch.ForeColor = System.Drawing.Color.White;
-            this.txtSearch.Location = new System.Drawing.Point(15, 18);
-            this.txtSearch.Name = "txtSearch";
-            this.txtSearch.Size = new System.Drawing.Size(440, 25);
-            this.txtSearch.TabIndex = 1;
-            this.txtSearch.Text = "Поиск отдела...";
-            // 
-            // lstDepartments
-            // 
-            this.lstDepartments.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(60)))), ((int)(((byte)(60)))), ((int)(((byte)(80)))));
-            this.lstDepartments.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.lstDepartments.Font = new System.Drawing.Font("Segoe UI", 10F);
-            this.lstDepartments.ForeColor = System.Drawing.Color.White;
-            this.lstDepartments.FormattingEnabled = true;
-            this.lstDepartments.IntegralHeight = false;
-            this.lstDepartments.ItemHeight = 17;
-            this.lstDepartments.Location = new System.Drawing.Point(15, 50);
-            this.lstDepartments.Name = "lstDepartments";
-            this.lstDepartments.Size = new System.Drawing.Size(494, 310);
-            this.lstDepartments.TabIndex = 0;
             // 
             // tabPrivate
             // 
@@ -287,8 +225,6 @@ namespace Messenger.Client
             this.panelMain.ResumeLayout(false);
             this.panelHeader.ResumeLayout(false);
             this.tabControl.ResumeLayout(false);
-            this.tabDepartment.ResumeLayout(false);
-            this.tabDepartment.PerformLayout();
             this.tabPrivate.ResumeLayout(false);
             this.tabGroup.ResumeLayout(false);
             this.tabGroup.PerformLayout();

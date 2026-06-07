@@ -44,6 +44,18 @@ namespace Messenger.Client
         private Button btnDeleteChat;
         private Button btnRefreshChats;
         private Button btnViewParticipants;
+        private Button btnJoinChat;
+        private Button btnLeaveChat;
+
+        // Отделы
+        private TabPage tabDepartments;
+        private Panel panelDepartmentsMain;
+        private DataGridView dgvDepartments;
+        private Button btnAddDepartment;
+        private Button btnEditDepartment;
+        private Button btnDeleteDepartment;
+        private Button btnRefreshDepartments;
+        private Label lblTitleDepartments;
 
         protected override void Dispose(bool disposing)
         {
@@ -85,6 +97,16 @@ namespace Messenger.Client
             this.btnDeleteChat = new System.Windows.Forms.Button();
             this.btnRefreshChats = new System.Windows.Forms.Button();
             this.btnViewParticipants = new System.Windows.Forms.Button();
+            this.btnJoinChat = new System.Windows.Forms.Button();
+            this.btnLeaveChat = new System.Windows.Forms.Button();
+            this.tabDepartments = new System.Windows.Forms.TabPage();
+            this.panelDepartmentsMain = new System.Windows.Forms.Panel();
+            this.lblTitleDepartments = new System.Windows.Forms.Label();
+            this.dgvDepartments = new System.Windows.Forms.DataGridView();
+            this.btnAddDepartment = new System.Windows.Forms.Button();
+            this.btnEditDepartment = new System.Windows.Forms.Button();
+            this.btnDeleteDepartment = new System.Windows.Forms.Button();
+            this.btnRefreshDepartments = new System.Windows.Forms.Button();
             this.panelMain.SuspendLayout();
             this.tabControl.SuspendLayout();
             this.tabUsers.SuspendLayout();
@@ -93,6 +115,9 @@ namespace Messenger.Client
             this.panelHistoryMain.SuspendLayout();
             this.tabChats.SuspendLayout();
             this.panelChatsMain.SuspendLayout();
+            this.tabDepartments.SuspendLayout();
+            this.panelDepartmentsMain.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvDepartments)).BeginInit();
             this.SuspendLayout();
             // 
             // panelMain
@@ -111,6 +136,7 @@ namespace Messenger.Client
             this.tabControl.Controls.Add(this.tabUsers);
             this.tabControl.Controls.Add(this.tabHistory);
             this.tabControl.Controls.Add(this.tabChats);
+            this.tabControl.Controls.Add(this.tabDepartments);
             this.tabControl.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tabControl.Location = new System.Drawing.Point(20, 20);
             this.tabControl.Name = "tabControl";
@@ -422,6 +448,8 @@ namespace Messenger.Client
             this.panelChatsMain.Controls.Add(this.btnDeleteChat);
             this.panelChatsMain.Controls.Add(this.btnRefreshChats);
             this.panelChatsMain.Controls.Add(this.btnViewParticipants);
+            this.panelChatsMain.Controls.Add(this.btnJoinChat);
+            this.panelChatsMain.Controls.Add(this.btnLeaveChat);
             this.panelChatsMain.Dock = System.Windows.Forms.DockStyle.Fill;
             this.panelChatsMain.Location = new System.Drawing.Point(0, 0);
             this.panelChatsMain.Name = "panelChatsMain";
@@ -494,6 +522,141 @@ namespace Messenger.Client
             this.btnViewParticipants.Text = "👥 Участники";
             this.btnViewParticipants.UseVisualStyleBackColor = false;
             // 
+            // btnJoinChat
+            // 
+            this.btnJoinChat.BackColor = System.Drawing.Color.Transparent;
+            this.btnJoinChat.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
+            this.btnJoinChat.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnJoinChat.Font = new System.Drawing.Font("Segoe UI", 10F);
+            this.btnJoinChat.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
+            this.btnJoinChat.Location = new System.Drawing.Point(600, 294);
+            this.btnJoinChat.Name = "btnJoinChat";
+            this.btnJoinChat.Size = new System.Drawing.Size(160, 40);
+            this.btnJoinChat.TabIndex = 5;
+            this.btnJoinChat.Text = "🔌 Присоединиться";
+            this.btnJoinChat.UseVisualStyleBackColor = false;
+            // 
+            // btnLeaveChat
+            // 
+            this.btnLeaveChat.BackColor = System.Drawing.Color.Transparent;
+            this.btnLeaveChat.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(80)))), ((int)(((byte)(80)))));
+            this.btnLeaveChat.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnLeaveChat.Font = new System.Drawing.Font("Segoe UI", 10F);
+            this.btnLeaveChat.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(80)))), ((int)(((byte)(80)))));
+            this.btnLeaveChat.Location = new System.Drawing.Point(600, 353);
+            this.btnLeaveChat.Name = "btnLeaveChat";
+            this.btnLeaveChat.Size = new System.Drawing.Size(160, 40);
+            this.btnLeaveChat.TabIndex = 6;
+            this.btnLeaveChat.Text = "🚪 Покинуть чат";
+            this.btnLeaveChat.UseVisualStyleBackColor = false;
+            // 
+            // tabDepartments
+            // 
+            this.tabDepartments.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(45)))), ((int)(((byte)(58)))));
+            this.tabDepartments.Controls.Add(this.panelDepartmentsMain);
+            this.tabDepartments.Location = new System.Drawing.Point(4, 24);
+            this.tabDepartments.Name = "tabDepartments";
+            this.tabDepartments.Size = new System.Drawing.Size(852, 582);
+            this.tabDepartments.TabIndex = 3;
+            this.tabDepartments.Text = "Отделы";
+            // 
+            // panelDepartmentsMain
+            // 
+            this.panelDepartmentsMain.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(45)))), ((int)(((byte)(58)))));
+            this.panelDepartmentsMain.Controls.Add(this.lblTitleDepartments);
+            this.panelDepartmentsMain.Controls.Add(this.dgvDepartments);
+            this.panelDepartmentsMain.Controls.Add(this.btnAddDepartment);
+            this.panelDepartmentsMain.Controls.Add(this.btnEditDepartment);
+            this.panelDepartmentsMain.Controls.Add(this.btnDeleteDepartment);
+            this.panelDepartmentsMain.Controls.Add(this.btnRefreshDepartments);
+            this.panelDepartmentsMain.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.panelDepartmentsMain.Location = new System.Drawing.Point(0, 0);
+            this.panelDepartmentsMain.Name = "panelDepartmentsMain";
+            this.panelDepartmentsMain.Padding = new System.Windows.Forms.Padding(20);
+            this.panelDepartmentsMain.Size = new System.Drawing.Size(852, 582);
+            this.panelDepartmentsMain.TabIndex = 0;
+            // 
+            // lblTitleDepartments
+            // 
+            this.lblTitleDepartments.AutoSize = true;
+            this.lblTitleDepartments.Font = new System.Drawing.Font("Segoe UI", 16F, System.Drawing.FontStyle.Bold);
+            this.lblTitleDepartments.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
+            this.lblTitleDepartments.Location = new System.Drawing.Point(23, 20);
+            this.lblTitleDepartments.Name = "lblTitleDepartments";
+            this.lblTitleDepartments.Size = new System.Drawing.Size(253, 30);
+            this.lblTitleDepartments.TabIndex = 0;
+            this.lblTitleDepartments.Text = "Управление отделами";
+            // 
+            // dgvDepartments
+            // 
+            this.dgvDepartments.AllowUserToAddRows = false;
+            this.dgvDepartments.AllowUserToDeleteRows = false;
+            this.dgvDepartments.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+            this.dgvDepartments.BackgroundColor = System.Drawing.Color.FromArgb(((int)(((byte)(60)))), ((int)(((byte)(60)))), ((int)(((byte)(80)))));
+            this.dgvDepartments.Location = new System.Drawing.Point(20, 65);
+            this.dgvDepartments.Name = "dgvDepartments";
+            this.dgvDepartments.ReadOnly = true;
+            this.dgvDepartments.RowHeadersVisible = false;
+            this.dgvDepartments.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
+            this.dgvDepartments.Size = new System.Drawing.Size(550, 465);
+            this.dgvDepartments.TabIndex = 1;
+            // 
+            // btnAddDepartment
+            // 
+            this.btnAddDepartment.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
+            this.btnAddDepartment.FlatAppearance.BorderSize = 0;
+            this.btnAddDepartment.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnAddDepartment.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
+            this.btnAddDepartment.ForeColor = System.Drawing.Color.Black;
+            this.btnAddDepartment.Location = new System.Drawing.Point(600, 65);
+            this.btnAddDepartment.Name = "btnAddDepartment";
+            this.btnAddDepartment.Size = new System.Drawing.Size(160, 40);
+            this.btnAddDepartment.TabIndex = 2;
+            this.btnAddDepartment.Text = "➕ Добавить";
+            this.btnAddDepartment.UseVisualStyleBackColor = false;
+            // 
+            // btnEditDepartment
+            // 
+            this.btnEditDepartment.BackColor = System.Drawing.Color.Transparent;
+            this.btnEditDepartment.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
+            this.btnEditDepartment.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnEditDepartment.Font = new System.Drawing.Font("Segoe UI", 10F);
+            this.btnEditDepartment.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
+            this.btnEditDepartment.Location = new System.Drawing.Point(600, 120);
+            this.btnEditDepartment.Name = "btnEditDepartment";
+            this.btnEditDepartment.Size = new System.Drawing.Size(160, 40);
+            this.btnEditDepartment.TabIndex = 3;
+            this.btnEditDepartment.Text = "✏ Редактировать";
+            this.btnEditDepartment.UseVisualStyleBackColor = false;
+            // 
+            // btnDeleteDepartment
+            // 
+            this.btnDeleteDepartment.BackColor = System.Drawing.Color.Transparent;
+            this.btnDeleteDepartment.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(80)))), ((int)(((byte)(80)))));
+            this.btnDeleteDepartment.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnDeleteDepartment.Font = new System.Drawing.Font("Segoe UI", 10F);
+            this.btnDeleteDepartment.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(80)))), ((int)(((byte)(80)))));
+            this.btnDeleteDepartment.Location = new System.Drawing.Point(600, 177);
+            this.btnDeleteDepartment.Name = "btnDeleteDepartment";
+            this.btnDeleteDepartment.Size = new System.Drawing.Size(160, 40);
+            this.btnDeleteDepartment.TabIndex = 4;
+            this.btnDeleteDepartment.Text = "🗑 Удалить";
+            this.btnDeleteDepartment.UseVisualStyleBackColor = false;
+            // 
+            // btnRefreshDepartments
+            // 
+            this.btnRefreshDepartments.BackColor = System.Drawing.Color.Transparent;
+            this.btnRefreshDepartments.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
+            this.btnRefreshDepartments.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnRefreshDepartments.Font = new System.Drawing.Font("Segoe UI", 10F);
+            this.btnRefreshDepartments.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
+            this.btnRefreshDepartments.Location = new System.Drawing.Point(600, 490);
+            this.btnRefreshDepartments.Name = "btnRefreshDepartments";
+            this.btnRefreshDepartments.Size = new System.Drawing.Size(160, 40);
+            this.btnRefreshDepartments.TabIndex = 5;
+            this.btnRefreshDepartments.Text = "🔄 Обновить";
+            this.btnRefreshDepartments.UseVisualStyleBackColor = false;
+            // 
             // AdminDashboardForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
@@ -518,6 +681,10 @@ namespace Messenger.Client
             this.panelHistoryMain.PerformLayout();
             this.tabChats.ResumeLayout(false);
             this.panelChatsMain.ResumeLayout(false);
+            this.tabDepartments.ResumeLayout(false);
+            this.panelDepartmentsMain.ResumeLayout(false);
+            this.panelDepartmentsMain.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvDepartments)).EndInit();
             this.ResumeLayout(false);
 
         }

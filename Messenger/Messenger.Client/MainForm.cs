@@ -41,10 +41,19 @@ namespace Messenger.Client
         private Timer typingTimer;
         private bool isTypingSent = false;
         private Timer clearTypingTimer;
+        private const int avatarSize = 32;
+        private const int messageMaxWidth = 400;
+        private const int messagePadding = 10;
+        private const int messageMargin = 20;
 
         public MainForm()
         {
             InitializeComponent();
+
+            this.FormBorderStyle = FormBorderStyle.Sizable;   // разрешаем изменение размера
+            this.Load += (s, e) => UpdateFormRegion();
+            this.Resize += (s, e) => UpdateFormRegion();
+            this.ResizeEnd += (s, e) => UpdateFormRegion();
 
             this.Resize += (sender, e) =>
             {
@@ -61,7 +70,8 @@ namespace Messenger.Client
 
             /// Скругление аватарки чата
             picChatAvatar.SizeMode = PictureBoxSizeMode.StretchImage;
-            picChatAvatar.Paint += (s, e) => {
+            picChatAvatar.Paint += (s, e) =>
+            {
                 using (var graphicsPath = new GraphicsPath())
                 {
                     graphicsPath.AddEllipse(0, 0, picChatAvatar.Width, picChatAvatar.Height);
@@ -176,6 +186,23 @@ namespace Messenger.Client
             // 4. Для красоты — меняем цвет крестика при наведении мыши
             lblClearSearch.MouseEnter += (sender, e) => lblClearSearch.ForeColor = Color.White;
             lblClearSearch.MouseLeave += (sender, e) => lblClearSearch.ForeColor = Color.Gray;
+        }
+
+        private void UpdateFormRegion()
+        {
+            if (this.WindowState == FormWindowState.Maximized)
+            {
+                // В полноэкранном режиме убираем скругление
+                this.Region = null;
+            }
+            else
+            {
+                int radius = 20;
+                // Чтобы радиус не превышал половину меньшей стороны окна
+                int maxRadius = Math.Min(this.ClientSize.Width, this.ClientSize.Height) / 2;
+                if (radius > maxRadius) radius = maxRadius;
+                SetRoundedRegion(this, radius);
+            }
         }
 
         private void SendTypingStart()
@@ -798,7 +825,7 @@ namespace Messenger.Client
         // ========== Админ-панель ==========
         private void BtnAdminPanel_Click(object sender, EventArgs e)
         {
-            using (var form = new AdminDashboardForm(networkClient, currentUser.Id))
+            using (var form = new AdminDashboardForm(networkClient, currentUser))
             {
                 form.ShowDialog();
             }
@@ -998,11 +1025,6 @@ namespace Messenger.Client
             object item = lstMessages.Items[e.Index];
             if (item == null) return;
 
-            // Заливаем фон строки цветом панели (чтобы не было артефактов)
-            using (var bgBrush = new SolidBrush(Color.FromArgb(30, 30, 46)))
-                e.Graphics.FillRectangle(bgBrush, e.Bounds);
-
-            // Разделитель даты
             if (item is string dateStr)
             {
                 using (var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
@@ -1012,52 +1034,86 @@ namespace Messenger.Client
             }
 
             if (!(item is Shared.Message msg)) return;
+
+            bool isPrivate = currentChat?.Type == ChatType.Private;
             bool isMy = msg.SenderId == currentUser.Id;
-            bool isSelected = selectedMessageIndices.Contains(e.Index);
+            bool needAvatar = !isPrivate && !isMy && IsLastInSeries(e.Index);
+            bool needSenderName = !isPrivate && !isMy && IsFirstInSeries(e.Index);
 
-            const int maxWidth = 400;
-            const int padding = 10;
-            int x = isMy ? e.Bounds.Right - maxWidth - 20 : e.Bounds.Left + 20;
-            int textWidth = maxWidth - 2 * padding;
-            Rectangle bubbleRect = new Rectangle(x, e.Bounds.Y + 2, maxWidth, e.Bounds.Height - 4);
+            int avatarAreaWidth = (!isPrivate && !isMy) ? (avatarSize + 10) : 0; // место под аватар только для чужих в групповых
 
-            // Цвет пузыря (фона)
+            // Позиция блока сообщения
+            int x;
+            if (isMy)
+            {
+                // Свои: прижаты к правому краю, без отступа под аватар
+                x = e.Bounds.Right - messageMaxWidth - messageMargin;
+            }
+            else
+            {
+                // Чужие: отступ слева с учетом места под аватар
+                x = e.Bounds.Left + messageMargin + avatarAreaWidth;
+            }
+
+            int topOffset = 2;
+            Rectangle bubbleRect = new Rectangle(x, e.Bounds.Y + topOffset, messageMaxWidth, e.Bounds.Height - 4);
+
             Color bgColor = isMy ? Color.FromArgb(60, 80, 120) : Color.FromArgb(50, 50, 65);
-            // Если выделено – добавим золотой полупрозрачный слой поверх
-            if (isSelected)
-                bgColor = Color.FromArgb(200, 255, 215, 0); // золотистый
-
-            Color borderColor = isSelected ? Color.FromArgb(255, 230, 100) : Color.White;
-
             using (var path = GetRoundedRect(bubbleRect, 10))
             using (var brush = new SolidBrush(bgColor))
-            using (var pen = new Pen(borderColor, isSelected ? 2 : 1))
+            using (var pen = new Pen(Color.White, 1))
             {
                 e.Graphics.FillPath(brush, path);
                 e.Graphics.DrawPath(pen, path);
             }
 
-            int currentY = e.Bounds.Y + 5;
-            // Имя отправителя
-            string senderDisplay = string.IsNullOrEmpty(msg.SenderDepartment) ? msg.SenderName : $"{msg.SenderName} ({msg.SenderDepartment})";
-            using (var brush = new SolidBrush(Color.White))
-                e.Graphics.DrawString(senderDisplay, messageSenderFont, brush, new RectangleF(x + padding, currentY, textWidth, 100));
-            SizeF senderSize = e.Graphics.MeasureString(senderDisplay, messageSenderFont, textWidth);
-            currentY += (int)senderSize.Height + 5;
+            // Аватар для чужих (слева)
+            if (needAvatar)
+            {
+                Rectangle avatarRect = new Rectangle(bubbleRect.Left - avatarSize - 10, e.Bounds.Y + 5, avatarSize, avatarSize);
+                using (var path = new GraphicsPath())
+                {
+                    path.AddEllipse(avatarRect);
+                    using (var brush = new SolidBrush(Color.FromArgb(63, 81, 181)))
+                        e.Graphics.FillPath(brush, path);
+                }
+                string initials = GetInitials(msg.SenderName);
+                using (var font = new Font("Segoe UI", 12, FontStyle.Bold))
+                using (var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
+                    e.Graphics.DrawString(initials, font, Brushes.White, avatarRect, sf);
+            }
 
-            // Текст
-            using (var brush = new SolidBrush(Color.White))
-                e.Graphics.DrawString(msg.Text, messageTextFont, brush, new RectangleF(x + padding, currentY, textWidth, 1000));
-            SizeF textSize = e.Graphics.MeasureString(msg.Text, messageTextFont, textWidth);
-            currentY += (int)textSize.Height + 5;
+            int currentY = e.Bounds.Y + (IsFirstInSeries(e.Index) ? 5 : 2);
 
-            // Время
+            // Имя отправителя (только для чужих, первых в серии)
+            if (needSenderName)
+            {
+                string senderDisplay = string.IsNullOrEmpty(msg.SenderDepartment)
+                    ? msg.SenderName
+                    : $"{msg.SenderName} ({msg.SenderDepartment})";
+                using (var brush = new SolidBrush(Color.White))
+                    e.Graphics.DrawString(senderDisplay, messageSenderFont, brush,
+                        new RectangleF(x + messagePadding, currentY, messageMaxWidth - 2 * messagePadding, 100));
+                SizeF senderSize = e.Graphics.MeasureString(senderDisplay, messageSenderFont, messageMaxWidth - 2 * messagePadding);
+                currentY += (int)senderSize.Height + 5;
+            }
+            else
+            {
+                currentY += 2;
+            }
+
+            // Текст сообщения
+            using (var brush = new SolidBrush(Color.White))
+                e.Graphics.DrawString(msg.Text, messageTextFont, brush,
+                    new RectangleF(x + messagePadding, currentY, messageMaxWidth - 2 * messagePadding, 1000));
+
+            // Время и отметка о редактировании
             string timeStr = msg.SentAt.ToString("HH:mm");
             if (msg.EditedAt.HasValue) timeStr += " (ред.)";
             using (var brush = new SolidBrush(Color.White))
             {
                 SizeF timeSize = e.Graphics.MeasureString(timeStr, messageTimeFont);
-                float timeX = bubbleRect.Right - padding - timeSize.Width;
+                float timeX = bubbleRect.Right - messagePadding - timeSize.Width;
                 float timeY = bubbleRect.Bottom - timeSize.Height - 5;
                 e.Graphics.DrawString(timeStr, messageTimeFont, brush, timeX, timeY);
             }
@@ -1337,39 +1393,44 @@ namespace Messenger.Client
         {
             if (e.Index < 0 || lstMessages.Items[e.Index] == null) return;
 
-            // Разделитель даты (строка)
             if (lstMessages.Items[e.Index] is string)
             {
                 e.ItemHeight = 30;
                 return;
             }
 
-            // Сообщение
             if (lstMessages.Items[e.Index] is Shared.Message msg)
             {
-                const int maxWidth = 400;          // ширина "пузыря"
-                const int padding = 10;             // отступы внутри пузыря
-                int textWidth = maxWidth - 2 * padding;
+                bool isPrivate = currentChat?.Type == ChatType.Private;
+                bool isMy = msg.SenderId == currentUser.Id;
+                bool needSenderName = !isPrivate && !isMy && IsFirstInSeries(e.Index);
 
-                int y = 5; // верхний отступ
+                int textWidth = messageMaxWidth - 2 * messagePadding; // ширина текста внутри блока (одинаковая для всех)
 
-                // Имя отправителя
-                string senderDisplay = string.IsNullOrEmpty(msg.SenderDepartment)
-                    ? msg.SenderName
-                    : $"{msg.SenderName} ({msg.SenderDepartment})";
-                SizeF senderSize = e.Graphics.MeasureString(senderDisplay, messageSenderFont, textWidth);
-                y += (int)senderSize.Height + 5;
+                int y = 2;
+                if (needSenderName)
+                {
+                    string senderDisplay = string.IsNullOrEmpty(msg.SenderDepartment)
+                        ? msg.SenderName
+                        : $"{msg.SenderName} ({msg.SenderDepartment})";
+                    SizeF senderSize = e.Graphics.MeasureString(senderDisplay, messageSenderFont, textWidth);
+                    y += (int)senderSize.Height + 5;
+                }
+                else
+                {
+                    y += 2;
+                }
 
-                // Текст сообщения
                 SizeF textSize = e.Graphics.MeasureString(msg.Text, messageTextFont, textWidth);
                 y += (int)textSize.Height + 5;
 
-                // Время
                 string timeStr = msg.SentAt.ToString("HH:mm");
+                if (msg.EditedAt.HasValue) timeStr += " (ред.)";
                 SizeF timeSize = e.Graphics.MeasureString(timeStr, messageTimeFont);
                 y += (int)timeSize.Height + 5;
 
-                e.ItemHeight = y;
+                int minHeight = (!isPrivate && !isMy && IsLastInSeries(e.Index)) ? (avatarSize + 10) : 0;
+                e.ItemHeight = Math.Max(y, minHeight);
             }
         }
 
@@ -1661,6 +1722,44 @@ namespace Messenger.Client
                 lblOnlineCount.Text = $"🟢 Онлайн: {online}";
             if (lblTotalUsers != null)
                 lblTotalUsers.Text = $"👥 Всего: {total}";
+        }
+
+        /// <summary>
+        /// Определяет, является ли сообщение первым в серии от одного отправителя
+        /// (разделитель даты или смена отправителя прерывают серию)
+        /// </summary>
+        private bool IsFirstInSeries(int currentIndex)
+        {
+            if (currentIndex < 0) return true;
+            if (!(lstMessages.Items[currentIndex] is Shared.Message currentMsg)) return true;
+
+            for (int i = currentIndex - 1; i >= 0; i--)
+            {
+                if (lstMessages.Items[i] is string)
+                    return true; // разделитель даты прерывает серию
+                if (lstMessages.Items[i] is Shared.Message prevMsg)
+                    return prevMsg.SenderId != currentMsg.SenderId;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Определяет, является ли сообщение последним в серии от одного отправителя
+        /// (разделитель даты или смена отправителя прерывают серию)
+        /// </summary>
+        private bool IsLastInSeries(int currentIndex)
+        {
+            if (currentIndex < 0) return true;
+            if (!(lstMessages.Items[currentIndex] is Shared.Message currentMsg)) return true;
+
+            for (int i = currentIndex + 1; i < lstMessages.Items.Count; i++)
+            {
+                if (lstMessages.Items[i] is string)
+                    return true; // разделитель даты прерывает серию
+                if (lstMessages.Items[i] is Shared.Message nextMsg)
+                    return nextMsg.SenderId != currentMsg.SenderId;
+            }
+            return true;
         }
     }
 }

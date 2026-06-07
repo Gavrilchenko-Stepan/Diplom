@@ -61,6 +61,11 @@ namespace Messenger.Shared
 
         DeleteChat,
         ChatDeleted,
-        TypingStatus
+        TypingStatus,
+
+        GetAllDepartments,
+        AddDepartment,
+        UpdateDepartment,
+        DeleteDepartment
     }
 }

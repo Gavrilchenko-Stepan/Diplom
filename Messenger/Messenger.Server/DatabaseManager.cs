@@ -1015,5 +1015,67 @@ namespace Messenger.Server
                 }
             }
         }
+
+        public void AddDepartment(Department department)
+        {
+            lock (dbLock)
+            {
+                string insert = "INSERT INTO departments (name, description) VALUES (@name, @desc); SELECT last_insert_rowid();";
+                using (var cmd = new SQLiteCommand(insert, connection))
+                {
+                    cmd.Parameters.AddWithValue("@name", department.Name);
+                    cmd.Parameters.AddWithValue("@desc", department.Description ?? (object)DBNull.Value);
+                    int newId = Convert.ToInt32(cmd.ExecuteScalar());
+                    department.Id = newId;
+                }
+                // Создаём чат для нового отдела
+                EnsureDepartmentChat(department.Id);
+            }
+        }
+
+        public void UpdateDepartment(Department department)
+        {
+            lock (dbLock)
+            {
+                string updateDept = "UPDATE departments SET name = @name, description = @desc WHERE id = @id";
+                using (var cmd = new SQLiteCommand(updateDept, connection))
+                {
+                    cmd.Parameters.AddWithValue("@name", department.Name);
+                    cmd.Parameters.AddWithValue("@desc", department.Description ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@id", department.Id);
+                    cmd.ExecuteNonQuery();
+                }
+                // Обновляем имя чата отдела
+                string updateChat = "UPDATE chats SET name = @name WHERE type = 'Department' AND department_id = @deptId";
+                using (var cmd = new SQLiteCommand(updateChat, connection))
+                {
+                    cmd.Parameters.AddWithValue("@name", department.Name);
+                    cmd.Parameters.AddWithValue("@deptId", department.Id);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+        }
+
+        public void DeleteDepartment(int departmentId)
+        {
+            lock (dbLock)
+            {
+                // Удаляем чат отдела (каскадно удалит участников и сообщения)
+                string deleteChat = "DELETE FROM chats WHERE type = 'Department' AND department_id = @deptId";
+                using (var cmd = new SQLiteCommand(deleteChat, connection))
+                {
+                    cmd.Parameters.AddWithValue("@deptId", departmentId);
+                    cmd.ExecuteNonQuery();
+                }
+                // Удаляем отдел
+                string deleteDept = "DELETE FROM departments WHERE id = @id";
+                using (var cmd = new SQLiteCommand(deleteDept, connection))
+                {
+                    cmd.Parameters.AddWithValue("@id", departmentId);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+        }
+
     }
 }

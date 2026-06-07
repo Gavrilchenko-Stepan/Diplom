@@ -130,6 +130,19 @@ namespace Messenger.Server
                     case CommandType.TypingStatus:
                         HandleTypingStatus(packet);
                         break;
+
+                    case CommandType.GetAllDepartments:
+                        HandleGetAllDepartments();
+                        break;
+                    case CommandType.AddDepartment:
+                        HandleAddDepartment(packet);
+                        break;
+                    case CommandType.UpdateDepartment:
+                        HandleUpdateDepartment(packet);
+                        break;
+                    case CommandType.DeleteDepartment:
+                        HandleDeleteDepartment(packet);
+                        break;
                 }
             }
             catch (Exception ex)
@@ -633,6 +646,40 @@ namespace Messenger.Server
                 Command = CommandType.TypingStatus,
                 Data = new { chatId, userId, isTyping }
             }, userId);
+        }
+
+        private void HandleGetAllDepartments()
+        {
+            if (User == null || !User.IsAdmin) return;
+            var depts = db.GetAllDepartments();
+            SendPacket(new NetworkPacket { Command = CommandType.DepartmentsList, Data = depts });
+        }
+
+        private void HandleAddDepartment(NetworkPacket packet)
+        {
+            if (User == null || !User.IsAdmin) return;
+            var dept = JsonSerializer.Deserialize<Department>(((JsonElement)packet.Data).GetRawText());
+            db.AddDepartment(dept);
+            SendPacket(new NetworkPacket { Command = CommandType.DepartmentsList, Data = db.GetAllDepartments() });
+            server.Log($"Администратор {User.FullName} добавил отдел '{dept.Name}'");
+        }
+
+        private void HandleUpdateDepartment(NetworkPacket packet)
+        {
+            if (User == null || !User.IsAdmin) return;
+            var dept = JsonSerializer.Deserialize<Department>(((JsonElement)packet.Data).GetRawText());
+            db.UpdateDepartment(dept);
+            SendPacket(new NetworkPacket { Command = CommandType.DepartmentsList, Data = db.GetAllDepartments() });
+            server.Log($"Администратор {User.FullName} обновил отдел '{dept.Name}'");
+        }
+
+        private void HandleDeleteDepartment(NetworkPacket packet)
+        {
+            if (User == null || !User.IsAdmin) return;
+            int deptId = ((JsonElement)packet.Data).GetInt32();
+            db.DeleteDepartment(deptId);
+            SendPacket(new NetworkPacket { Command = CommandType.DepartmentsList, Data = db.GetAllDepartments() });
+            server.Log($"Администратор {User.FullName} удалил отдел {deptId}");
         }
     }
 }

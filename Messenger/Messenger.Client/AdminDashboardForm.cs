@@ -14,7 +14,7 @@ namespace Messenger.Client
     public partial class AdminDashboardForm : Form
     {
         private NetworkClient networkClient;
-        private int currentUserId;
+        private User currentUser;
         private int? _currentChatId = null;
 
         // Данные для пользователей
@@ -34,12 +34,13 @@ namespace Messenger.Client
         private Font messageTimeFont;
         private Font dateFont;
 
-        public AdminDashboardForm(NetworkClient client, int userId)
+        private const int avatarSize = 32;
+
+        public AdminDashboardForm(NetworkClient client, User user)
         {
             InitializeComponent();
 
             this.Load += (s, e) => SetRoundedRegion(this, 20);
-            this.tabControl.DrawMode = TabDrawMode.OwnerDrawFixed;
 
             cmbChat.DataSource = null;
 
@@ -50,7 +51,7 @@ namespace Messenger.Client
             dateFont = new Font("Segoe UI", 9, FontStyle.Bold);
 
             networkClient = client;
-            currentUserId = userId;
+            currentUser = user;
 
             cmbChat.SelectedIndexChanged += (s, e) =>
             {
@@ -68,6 +69,9 @@ namespace Messenger.Client
             btnEdit.Click += BtnEdit_Click;
             btnDelete.Click += BtnDelete_Click;
             btnRefreshUsers.Click += BtnRefreshUsers_Click;
+            btnJoinChat.Click += BtnJoinChat_Click;
+            btnLeaveChat.Click += BtnLeaveChat_Click;
+            tvChats.AfterSelect += TvChats_AfterSelect;
 
             btnLoadHistory.Click += BtnLoadHistory_Click;
             btnExport.Click += BtnExport_Click;
@@ -80,7 +84,14 @@ namespace Messenger.Client
             txtSearch.TextChanged += TxtSearch_TextChanged;
             tvUsers.NodeMouseDoubleClick += TvUsers_NodeMouseDoubleClick;
 
+            btnAddDepartment.Click += BtnAddDepartment_Click;
+            btnEditDepartment.Click += BtnEditDepartment_Click;
+            btnDeleteDepartment.Click += BtnDeleteDepartment_Click;
+            btnRefreshDepartments.Click += BtnRefreshDepartments_Click;
 
+            this.lstHistoryMessages.DrawMode = DrawMode.OwnerDrawVariable;
+            this.lstHistoryMessages.MeasureItem += new MeasureItemEventHandler(this.LstHistory_MeasureItem);
+            this.lstHistoryMessages.DrawItem += new DrawItemEventHandler(this.LstHistory_DrawItem);
 
             LoadData();
         }
@@ -92,6 +103,7 @@ namespace Messenger.Client
             networkClient.SendPacket(new NetworkPacket { Command = Shared.CommandType.GetAllUsers });
             networkClient.SendPacket(new NetworkPacket { Command = Shared.CommandType.GetDepartments });
             networkClient.SendPacket(new NetworkPacket { Command = Shared.CommandType.GetChatsForHistory });
+            networkClient.SendPacket(new NetworkPacket { Command = CommandType.GetAllDepartments });
         }
 
         private void OnPacketReceived(NetworkPacket packet)
@@ -114,6 +126,7 @@ namespace Messenger.Client
                     case Shared.CommandType.DepartmentsList:
                         var jsonDept = ((JsonElement)packet.Data).GetRawText();
                         departments = JsonSerializer.Deserialize<List<Department>>(jsonDept);
+                        DisplayDepartments();
                         break;
                     case Shared.CommandType.ChatsList:
                         var jsonChats = ((JsonElement)packet.Data).GetRawText();
@@ -143,6 +156,7 @@ namespace Messenger.Client
                         }
 
                         UpdateChatsTree();
+                        UpdateChatActionButtons(null);
                         break;
                     case Shared.CommandType.MessagesList:
                         var jsonMsgs = ((JsonElement)packet.Data).GetRawText();
@@ -154,6 +168,16 @@ namespace Messenger.Client
                         break;
                     case Shared.CommandType.ChatDeleted:
                         LoadData();
+                        break;
+                    case Shared.CommandType.ChatInfo:
+                        var jsonChatInfo = ((JsonElement)packet.Data).GetRawText();
+                        var fullChat = JsonSerializer.Deserialize<Chat>(jsonChatInfo);
+                        // Обновляем Tag текущего выбранного узла, если это тот же чат
+                        if (tvChats.SelectedNode?.Tag is Chat selected && selected.Id == fullChat.Id)
+                        {
+                            tvChats.SelectedNode.Tag = fullChat;
+                            UpdateChatActionButtons(fullChat);
+                        }
                         break;
                 }
             }
@@ -174,6 +198,21 @@ namespace Messenger.Client
                 path.CloseFigure();
                 ctrl.Region = new Region(path);
             }
+        }
+
+        private void DisplayDepartments()
+        {
+            dgvDepartments.DataSource = null;
+            dgvDepartments.DataSource = departments;
+
+            // Меняем заголовки на русские
+            if (dgvDepartments.Columns["Name"] != null)
+                dgvDepartments.Columns["Name"].HeaderText = "Название отдела";
+            if (dgvDepartments.Columns.Contains("Description"))
+                dgvDepartments.Columns["Description"].HeaderText = "Описание";
+            // При желании скрыть столбец Id:
+            if (dgvDepartments.Columns["Id"] != null)
+                dgvDepartments.Columns["Id"].Visible = false;
         }
 
         // ================== Управление пользователями ==================
@@ -252,7 +291,7 @@ namespace Messenger.Client
         {
             if (tvUsers.SelectedNode?.Tag is User user)
             {
-                if (user.Id == currentUserId)
+                if (user.Id == currentUser.Id)
                 {
                     MessageBox.Show("Нельзя удалить самого себя.");
                     return;
@@ -333,18 +372,33 @@ namespace Messenger.Client
             {
                 const int maxWidth = 500;
                 const int padding = 10;
-                int textWidth = maxWidth - 2 * padding;
-                int y = 5;
+                const int avatarAreaWidth = avatarSize + 10; // ширина области под аватар (20px отступ слева + аватар + отступ)
+                                                             // Фиксированная ширина текста (одинаковая для всех)
+                int textWidth = maxWidth - 2 * padding - avatarAreaWidth;
 
-                string senderDisplay = $"{msg.UserName} ({msg.Department})";
-                SizeF senderSize = e.Graphics.MeasureString(senderDisplay, messageSenderFont, textWidth);
-                y += (int)senderSize.Height + 5;
+                bool needSenderName = IsFirstInSeries(e.Index);
+
+                int y = 2;
+                if (needSenderName)
+                {
+                    string senderDisplay = string.IsNullOrEmpty(msg.Department) ? msg.UserName : $"{msg.UserName} ({msg.Department})";
+                    SizeF senderSize = e.Graphics.MeasureString(senderDisplay, messageSenderFont, textWidth);
+                    y += (int)senderSize.Height + 5;
+                }
+                else
+                {
+                    y += 2;
+                }
 
                 SizeF textSize = e.Graphics.MeasureString(msg.MessageText, messageTextFont, textWidth);
                 y += (int)textSize.Height + 5;
 
-                y += 20;
-                e.ItemHeight = y;
+                string timeStr = msg.SentAt.ToString("HH:mm");
+                if (msg.EditedAt.HasValue) timeStr += " (ред.)";
+                SizeF timeSize = e.Graphics.MeasureString(timeStr, messageTimeFont);
+                y += (int)timeSize.Height + 5;
+
+                e.ItemHeight = Math.Max(y, avatarSize + 10); // минимум под аватар
             }
         }
 
@@ -364,38 +418,75 @@ namespace Messenger.Client
 
             if (!(item is HistoryMessage msg)) return;
 
+            bool isMy = msg.Login == currentUser.Username;
+            bool needAvatar = IsLastInSeries(e.Index);
+            bool needSenderName = IsFirstInSeries(e.Index);
+
             const int maxWidth = 500;
             const int padding = 10;
-            int x = e.Bounds.Left + 20;
-            int textWidth = maxWidth - 2 * padding;
-            Rectangle bubbleRect = new Rectangle(x, e.Bounds.Y + 2, maxWidth, e.Bounds.Height - 4);
+            const int leftMargin = 20;               // отступ от левого края
+            const int avatarAreaWidth = avatarSize + 10; // ширина области аватара (20px отступ + аватар + отступ)
+            int textWidth = maxWidth - 2 * padding - avatarAreaWidth;
 
-            Color bgColor = Color.FromArgb(240, 240, 240);
-            Color borderColor = Color.Gray;
+            // Все сообщения начинаются с одной и той же позиции (после области аватара)
+            int x = leftMargin + avatarAreaWidth;
 
+            int topOffset = 2;
+            Rectangle bubbleRect = new Rectangle(x, e.Bounds.Y + topOffset, maxWidth, e.Bounds.Height - 4);
+
+            Color bgColor = isMy ? Color.FromArgb(60, 80, 120) : Color.FromArgb(50, 50, 65);
             using (var path = GetRoundedRect(bubbleRect, 10))
             using (var brush = new SolidBrush(bgColor))
-            using (var pen = new Pen(borderColor, 1))
+            using (var pen = new Pen(Color.White, 1))
             {
                 e.Graphics.FillPath(brush, path);
                 e.Graphics.DrawPath(pen, path);
             }
 
-            int currentY = e.Bounds.Y + 5;
-            string senderDisplay = $"{msg.UserName} ({msg.Department})";
-            using (var brush = new SolidBrush(Color.Black))
-                e.Graphics.DrawString(senderDisplay, messageSenderFont, brush, new RectangleF(x + padding, currentY, textWidth, 100));
-            SizeF senderSize = e.Graphics.MeasureString(senderDisplay, messageSenderFont, textWidth);
-            currentY += (int)senderSize.Height + 5;
+            // Аватар (в области слева) – рисуется только для последнего сообщения в серии
+            if (needAvatar)
+            {
+                Rectangle avatarRect = new Rectangle(leftMargin, e.Bounds.Y + 5, avatarSize, avatarSize);
+                using (var path = new GraphicsPath())
+                {
+                    path.AddEllipse(avatarRect);
+                    using (var brush = new SolidBrush(Color.FromArgb(63, 81, 181)))
+                        e.Graphics.FillPath(brush, path);
+                }
+                string initials = GetInitials(msg.UserName);
+                using (var font = new Font("Segoe UI", 12, FontStyle.Bold))
+                using (var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
+                    e.Graphics.DrawString(initials, font, Brushes.White, avatarRect, sf);
+            }
 
-            using (var brush = new SolidBrush(Color.Black))
-                e.Graphics.DrawString(msg.MessageText, messageTextFont, brush, new RectangleF(x + padding, currentY, textWidth, 1000));
+            int currentY = e.Bounds.Y + (IsFirstInSeries(e.Index) ? 5 : 2);
+
+            // Имя отправителя (только для первого в серии)
+            if (needSenderName)
+            {
+                string senderDisplay = string.IsNullOrEmpty(msg.Department) ? msg.UserName : $"{msg.UserName} ({msg.Department})";
+                using (var brush = new SolidBrush(Color.White))
+                    e.Graphics.DrawString(senderDisplay, messageSenderFont, brush,
+                        new RectangleF(x + padding, currentY, textWidth, 100));
+                SizeF senderSize = e.Graphics.MeasureString(senderDisplay, messageSenderFont, textWidth);
+                currentY += (int)senderSize.Height + 5;
+            }
+            else
+            {
+                currentY += 2;
+            }
+
+            // Текст сообщения
+            using (var brush = new SolidBrush(Color.White))
+                e.Graphics.DrawString(msg.MessageText, messageTextFont, brush,
+                    new RectangleF(x + padding, currentY, textWidth, 1000));
             SizeF textSize = e.Graphics.MeasureString(msg.MessageText, messageTextFont, textWidth);
             currentY += (int)textSize.Height + 5;
 
+            // Время
             string timeStr = msg.SentAt.ToString("HH:mm");
             if (msg.EditedAt.HasValue) timeStr += " (ред.)";
-            using (var brush = new SolidBrush(Color.Gray))
+            using (var brush = new SolidBrush(Color.White))
             {
                 SizeF timeSize = e.Graphics.MeasureString(timeStr, messageTimeFont);
                 float timeX = bubbleRect.Right - padding - timeSize.Width;
@@ -570,7 +661,7 @@ namespace Messenger.Client
                 return;
             }
 
-            using (var form = new ManageParticipantsForm(selectedChat.Id, currentUserId, networkClient))
+            using (var form = new ManageParticipantsForm(selectedChat.Id, currentUser.Id, networkClient))
                 form.ShowDialog();
         }
 
@@ -578,6 +669,192 @@ namespace Messenger.Client
         {
             networkClient.OnPacketReceived -= OnPacketReceived;
             base.OnFormClosing(e);
+        }
+
+        private string GetInitials(string fullName)
+        {
+            var parts = fullName?.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts == null || parts.Length == 0) return "?";
+            if (parts.Length == 1) return parts[0][0].ToString().ToUpper();
+            return (parts[0][0].ToString() + parts[parts.Length - 1][0].ToString()).ToUpper();
+        }
+
+        private bool IsFirstInSeries(int index)
+        {
+            if (index <= 0) return true;
+            if (lstHistoryMessages.Items[index] is HistoryMessage current)
+            {
+                for (int i = index - 1; i >= 0; i--)
+                {
+                    if (lstHistoryMessages.Items[i] is string) return true; // разделитель даты
+                    if (lstHistoryMessages.Items[i] is HistoryMessage prev)
+                        return prev.UserName != current.UserName;
+                }
+            }
+            return true;
+        }
+
+        private bool IsLastInSeries(int index)
+        {
+            if (index < 0 || index >= lstHistoryMessages.Items.Count - 1) return true;
+            if (lstHistoryMessages.Items[index] is HistoryMessage current)
+            {
+                for (int i = index + 1; i < lstHistoryMessages.Items.Count; i++)
+                {
+                    if (lstHistoryMessages.Items[i] is string) return true;
+                    if (lstHistoryMessages.Items[i] is HistoryMessage next)
+                        return next.UserName != current.UserName;
+                }
+            }
+            return true;
+        }
+
+        private void UpdateChatActionButtons(Chat selectedChat)
+        {
+            // Кнопки доступны только для групповых чатов и чатов отделов
+            if (selectedChat == null || (selectedChat.Type != ChatType.Group && selectedChat.Type != ChatType.Department))
+            {
+                btnJoinChat.Enabled = false;
+                btnLeaveChat.Enabled = false;
+                return;
+            }
+
+            // Проверяем, состоит ли текущий администратор в участниках чата
+            bool isParticipant = selectedChat.Participants?.Any(p => p.Id == currentUser.Id) == true;
+
+            btnJoinChat.Enabled = !isParticipant;
+            btnLeaveChat.Enabled = isParticipant;
+        }
+
+        //Обработчик выбора чата в дереве
+        private void TvChats_AfterSelect(object sender, TreeViewEventArgs e)
+        {
+            var selectedChat = e.Node?.Tag as Chat;
+            if (selectedChat != null)
+            {
+                _selectedChatIdForChats = selectedChat.Id;   // сохраняем ID
+                if (selectedChat.Type == ChatType.Group || selectedChat.Type == ChatType.Department)
+                {
+                    networkClient.SendPacket(new NetworkPacket
+                    {
+                        Command = Shared.CommandType.GetChatInfo,
+                        Data = selectedChat.Id
+                    });
+                }
+                else
+                {
+                    UpdateChatActionButtons(null);
+                }
+            }
+            else
+            {
+                _selectedChatIdForChats = null;
+                UpdateChatActionButtons(null);
+            }
+        }
+
+        private void BtnJoinChat_Click(object sender, EventArgs e)
+        {
+            var selectedChat = tvChats.SelectedNode?.Tag as Chat;
+            if (selectedChat == null || (selectedChat.Type != ChatType.Group && selectedChat.Type != ChatType.Department))
+                return;
+
+            var data = new Dictionary<string, int>
+            {
+                { "chatId", selectedChat.Id },
+                { "userId", currentUser.Id }
+            };
+            networkClient.SendPacket(new NetworkPacket
+            {
+                Command = Shared.CommandType.AddChatParticipant,
+                Data = data
+            });
+            _selectedChatIdForChats = (tvChats.SelectedNode?.Tag as Chat)?.Id;
+            LoadData();
+        }
+
+        private void BtnLeaveChat_Click(object sender, EventArgs e)
+        {
+            var selectedChat = tvChats.SelectedNode?.Tag as Chat;
+            if (selectedChat == null || (selectedChat.Type != ChatType.Group && selectedChat.Type != ChatType.Department))
+                return;
+
+            if (MessageBox.Show($"Вы действительно хотите покинуть чат \"{selectedChat.Name}\"?",
+                "Подтверждение", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                return;
+
+            var data = new Dictionary<string, int>
+            {
+                { "chatId", selectedChat.Id },
+                { "userId", currentUser.Id }
+            };
+            networkClient.SendPacket(new NetworkPacket
+            {
+                Command = Shared.CommandType.RemoveChatParticipant,
+                Data = data
+            });
+            _selectedChatIdForChats = (tvChats.SelectedNode?.Tag as Chat)?.Id;
+            LoadData();
+        }
+
+        private void BtnAddDepartment_Click(object sender, EventArgs e)
+        {
+            using (var form = new EditDepartmentForm())
+            {
+                if (form.ShowDialog() == DialogResult.OK)
+                {
+                    networkClient.SendPacket(new NetworkPacket
+                    {
+                        Command = CommandType.AddDepartment,
+                        Data = form.Department
+                    });
+                }
+            }
+        }
+
+        private void BtnEditDepartment_Click(object sender, EventArgs e)
+        {
+            if (dgvDepartments.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Выберите отдел для редактирования.", "Внимание", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            var dept = (Department)dgvDepartments.SelectedRows[0].DataBoundItem;
+            using (var form = new EditDepartmentForm(dept))
+            {
+                if (form.ShowDialog() == DialogResult.OK)
+                {
+                    networkClient.SendPacket(new NetworkPacket
+                    {
+                        Command = CommandType.UpdateDepartment,
+                        Data = form.Department
+                    });
+                }
+            }
+        }
+
+        private void BtnDeleteDepartment_Click(object sender, EventArgs e)
+        {
+            if (dgvDepartments.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Выберите отдел для удаления.", "Внимание", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            var dept = (Department)dgvDepartments.SelectedRows[0].DataBoundItem;
+            if (MessageBox.Show($"Удалить отдел \"{dept.Name}\"?\nВсе пользователи отдела останутся, но чат отдела будет удалён.",
+                "Подтверждение", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+            {
+                networkClient.SendPacket(new NetworkPacket
+                {
+                    Command = CommandType.DeleteDepartment,
+                    Data = dept.Id
+                });
+            }
+        }
+
+        private void BtnRefreshDepartments_Click(object sender, EventArgs e)
+        {
+            networkClient.SendPacket(new NetworkPacket { Command = CommandType.GetAllDepartments });
         }
     }
 }
