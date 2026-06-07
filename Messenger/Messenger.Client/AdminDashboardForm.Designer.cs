@@ -7,6 +7,7 @@ namespace Messenger.Client
     {
         private System.ComponentModel.IContainer components = null;
 
+        private Panel panelMain;
         private TabControl tabControl;
         private TabPage tabUsers;
         private TabPage tabHistory;
@@ -31,16 +32,15 @@ namespace Messenger.Client
         private Label lblPeriod;
         private DateTimePicker dtpStart;
         private DateTimePicker dtpEnd;
-        private CheckBox chkAllChats;
         private Button btnLoadHistory;
-        private ListBox lstHistoryMessages;   // <-- вместо DataGridView
+        private ListBox lstHistoryMessages;
         private Button btnExport;
         private Button btnClearHistory;
 
         // Вкладка Чаты
         private Panel panelChatsMain;
         private Label lblTitleChats;
-        private DataGridView dgvChats;
+        private TreeView tvChats;
         private Button btnDeleteChat;
         private Button btnRefreshChats;
         private Button btnViewParticipants;
@@ -54,38 +54,38 @@ namespace Messenger.Client
 
         private void InitializeComponent()
         {
-            this.tabControl = new TabControl();
-            this.tabUsers = new TabPage();
-            this.panelUserMain = new Panel();
-            this.lblTitleUsers = new Label();
-            this.txtSearch = new TextBox();
-            this.btnSearch = new Button();
-            this.tvUsers = new TreeView();
-            this.btnAdd = new Button();
-            this.btnEdit = new Button();
-            this.btnDelete = new Button();
-            this.btnRefreshUsers = new Button();
-            this.tabHistory = new TabPage();
-            this.panelHistoryMain = new Panel();
-            this.lblTitleHistory = new Label();
-            this.lblChat = new Label();
-            this.cmbChat = new ComboBox();
-            this.lblPeriod = new Label();
-            this.dtpStart = new DateTimePicker();
-            this.dtpEnd = new DateTimePicker();
-            this.chkAllChats = new CheckBox();
-            this.btnLoadHistory = new Button();
-            this.lstHistoryMessages = new ListBox();
-            this.btnExport = new Button();
-            this.btnClearHistory = new Button();
-            this.tabChats = new TabPage();
-            this.panelChatsMain = new Panel();
-            this.lblTitleChats = new Label();
-            this.dgvChats = new DataGridView();
-            this.btnDeleteChat = new Button();
-            this.btnRefreshChats = new Button();
-            this.btnViewParticipants = new Button();
-
+            this.panelMain = new System.Windows.Forms.Panel();
+            this.tabControl = new System.Windows.Forms.TabControl();
+            this.tabUsers = new System.Windows.Forms.TabPage();
+            this.panelUserMain = new System.Windows.Forms.Panel();
+            this.lblTitleUsers = new System.Windows.Forms.Label();
+            this.txtSearch = new System.Windows.Forms.TextBox();
+            this.btnSearch = new System.Windows.Forms.Button();
+            this.tvUsers = new System.Windows.Forms.TreeView();
+            this.btnAdd = new System.Windows.Forms.Button();
+            this.btnEdit = new System.Windows.Forms.Button();
+            this.btnDelete = new System.Windows.Forms.Button();
+            this.btnRefreshUsers = new System.Windows.Forms.Button();
+            this.tabHistory = new System.Windows.Forms.TabPage();
+            this.panelHistoryMain = new System.Windows.Forms.Panel();
+            this.lblTitleHistory = new System.Windows.Forms.Label();
+            this.lblChat = new System.Windows.Forms.Label();
+            this.cmbChat = new System.Windows.Forms.ComboBox();
+            this.lblPeriod = new System.Windows.Forms.Label();
+            this.dtpStart = new System.Windows.Forms.DateTimePicker();
+            this.dtpEnd = new System.Windows.Forms.DateTimePicker();
+            this.btnLoadHistory = new System.Windows.Forms.Button();
+            this.lstHistoryMessages = new System.Windows.Forms.ListBox();
+            this.btnExport = new System.Windows.Forms.Button();
+            this.btnClearHistory = new System.Windows.Forms.Button();
+            this.tabChats = new System.Windows.Forms.TabPage();
+            this.panelChatsMain = new System.Windows.Forms.Panel();
+            this.lblTitleChats = new System.Windows.Forms.Label();
+            this.tvChats = new System.Windows.Forms.TreeView();
+            this.btnDeleteChat = new System.Windows.Forms.Button();
+            this.btnRefreshChats = new System.Windows.Forms.Button();
+            this.btnViewParticipants = new System.Windows.Forms.Button();
+            this.panelMain.SuspendLayout();
             this.tabControl.SuspendLayout();
             this.tabUsers.SuspendLayout();
             this.panelUserMain.SuspendLayout();
@@ -93,30 +93,44 @@ namespace Messenger.Client
             this.panelHistoryMain.SuspendLayout();
             this.tabChats.SuspendLayout();
             this.panelChatsMain.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.dgvChats)).BeginInit();
             this.SuspendLayout();
-
+            // 
+            // panelMain
+            // 
+            this.panelMain.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(45)))), ((int)(((byte)(58)))));
+            this.panelMain.Controls.Add(this.tabControl);
+            this.panelMain.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.panelMain.Location = new System.Drawing.Point(0, 0);
+            this.panelMain.Name = "panelMain";
+            this.panelMain.Padding = new System.Windows.Forms.Padding(20);
+            this.panelMain.Size = new System.Drawing.Size(900, 650);
+            this.panelMain.TabIndex = 0;
             // 
             // tabControl
             // 
             this.tabControl.Controls.Add(this.tabUsers);
             this.tabControl.Controls.Add(this.tabHistory);
             this.tabControl.Controls.Add(this.tabChats);
-            this.tabControl.Dock = DockStyle.Fill;
-            this.tabControl.Location = new Point(0, 0);
-            this.tabControl.Size = new Size(1000, 700);
+            this.tabControl.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.tabControl.Location = new System.Drawing.Point(20, 20);
+            this.tabControl.Name = "tabControl";
+            this.tabControl.SelectedIndex = 0;
+            this.tabControl.Size = new System.Drawing.Size(860, 610);
             this.tabControl.TabIndex = 0;
-
             // 
             // tabUsers
             // 
+            this.tabUsers.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(45)))), ((int)(((byte)(58)))));
             this.tabUsers.Controls.Add(this.panelUserMain);
+            this.tabUsers.Location = new System.Drawing.Point(4, 24);
+            this.tabUsers.Name = "tabUsers";
+            this.tabUsers.Size = new System.Drawing.Size(852, 582);
+            this.tabUsers.TabIndex = 0;
             this.tabUsers.Text = "Пользователи";
-
             // 
             // panelUserMain
             // 
-            this.panelUserMain.BackColor = Color.FromArgb(45, 45, 58);
+            this.panelUserMain.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(45)))), ((int)(((byte)(58)))));
             this.panelUserMain.Controls.Add(this.lblTitleUsers);
             this.panelUserMain.Controls.Add(this.txtSearch);
             this.panelUserMain.Controls.Add(this.btnSearch);
@@ -125,249 +139,376 @@ namespace Messenger.Client
             this.panelUserMain.Controls.Add(this.btnEdit);
             this.panelUserMain.Controls.Add(this.btnDelete);
             this.panelUserMain.Controls.Add(this.btnRefreshUsers);
-            this.panelUserMain.Dock = DockStyle.Fill;
-            this.panelUserMain.Padding = new Padding(10);
-            this.panelUserMain.Size = new Size(1000, 700);
-
+            this.panelUserMain.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.panelUserMain.Location = new System.Drawing.Point(0, 0);
+            this.panelUserMain.Name = "panelUserMain";
+            this.panelUserMain.Padding = new System.Windows.Forms.Padding(20);
+            this.panelUserMain.Size = new System.Drawing.Size(852, 582);
+            this.panelUserMain.TabIndex = 0;
+            // 
+            // lblTitleUsers
+            // 
             this.lblTitleUsers.AutoSize = true;
-            this.lblTitleUsers.Font = new Font("Segoe UI", 16F, FontStyle.Bold);
-            this.lblTitleUsers.ForeColor = Color.FromArgb(0, 229, 255);
-            this.lblTitleUsers.Location = new Point(10, 10);
+            this.lblTitleUsers.Font = new System.Drawing.Font("Segoe UI", 16F, System.Drawing.FontStyle.Bold);
+            this.lblTitleUsers.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
+            this.lblTitleUsers.Location = new System.Drawing.Point(20, 20);
+            this.lblTitleUsers.Name = "lblTitleUsers";
+            this.lblTitleUsers.Size = new System.Drawing.Size(327, 30);
+            this.lblTitleUsers.TabIndex = 0;
             this.lblTitleUsers.Text = "Управление пользователями";
-
-            this.txtSearch.BackColor = Color.FromArgb(60, 60, 80);
-            this.txtSearch.BorderStyle = BorderStyle.FixedSingle;
-            this.txtSearch.ForeColor = Color.White;
-            this.txtSearch.Location = new Point(10, 50);
-            this.txtSearch.Size = new Size(200, 23);
-
-            this.btnSearch.BackColor = Color.FromArgb(0, 229, 255);
-            this.btnSearch.FlatStyle = FlatStyle.Flat;
-            this.btnSearch.ForeColor = Color.Black;
-            this.btnSearch.Location = new Point(215, 49);
-            this.btnSearch.Size = new Size(75, 27);
+            // 
+            // txtSearch
+            // 
+            this.txtSearch.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(60)))), ((int)(((byte)(60)))), ((int)(((byte)(80)))));
+            this.txtSearch.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.txtSearch.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.txtSearch.ForeColor = System.Drawing.Color.White;
+            this.txtSearch.Location = new System.Drawing.Point(20, 65);
+            this.txtSearch.Name = "txtSearch";
+            this.txtSearch.Size = new System.Drawing.Size(200, 23);
+            this.txtSearch.TabIndex = 1;
+            // 
+            // btnSearch
+            // 
+            this.btnSearch.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
+            this.btnSearch.FlatAppearance.BorderSize = 0;
+            this.btnSearch.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnSearch.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            this.btnSearch.ForeColor = System.Drawing.Color.Black;
+            this.btnSearch.Location = new System.Drawing.Point(230, 62);
+            this.btnSearch.Name = "btnSearch";
+            this.btnSearch.Size = new System.Drawing.Size(80, 28);
+            this.btnSearch.TabIndex = 2;
             this.btnSearch.Text = "Поиск";
             this.btnSearch.UseVisualStyleBackColor = false;
-
-            this.tvUsers.BackColor = Color.FromArgb(60, 60, 80);
-            this.tvUsers.BorderStyle = BorderStyle.FixedSingle;
-            this.tvUsers.ForeColor = Color.White;
-            this.tvUsers.Location = new Point(10, 85);
-            this.tvUsers.Size = new Size(580, 500);
-
-            this.btnAdd.BackColor = Color.FromArgb(0, 229, 255);
-            this.btnAdd.FlatStyle = FlatStyle.Flat;
-            this.btnAdd.ForeColor = Color.Black;
-            this.btnAdd.Location = new Point(610, 85);
-            this.btnAdd.Size = new Size(170, 40);
+            // 
+            // tvUsers
+            // 
+            this.tvUsers.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(60)))), ((int)(((byte)(60)))), ((int)(((byte)(80)))));
+            this.tvUsers.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.tvUsers.Font = new System.Drawing.Font("Segoe UI", 10F);
+            this.tvUsers.ForeColor = System.Drawing.Color.White;
+            this.tvUsers.Location = new System.Drawing.Point(20, 105);
+            this.tvUsers.Name = "tvUsers";
+            this.tvUsers.Size = new System.Drawing.Size(550, 430);
+            this.tvUsers.TabIndex = 3;
+            // 
+            // btnAdd
+            // 
+            this.btnAdd.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
+            this.btnAdd.FlatAppearance.BorderSize = 0;
+            this.btnAdd.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnAdd.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
+            this.btnAdd.ForeColor = System.Drawing.Color.Black;
+            this.btnAdd.Location = new System.Drawing.Point(600, 105);
+            this.btnAdd.Name = "btnAdd";
+            this.btnAdd.Size = new System.Drawing.Size(160, 40);
+            this.btnAdd.TabIndex = 4;
             this.btnAdd.Text = "➕ Добавить";
-
-            this.btnEdit.BackColor = Color.Transparent;
-            this.btnEdit.FlatAppearance.BorderColor = Color.FromArgb(0, 229, 255);
-            this.btnEdit.FlatStyle = FlatStyle.Flat;
-            this.btnEdit.ForeColor = Color.FromArgb(0, 229, 255);
-            this.btnEdit.Location = new Point(610, 135);
-            this.btnEdit.Size = new Size(170, 40);
-            this.btnEdit.Text = "✏️ Редактировать";
-
-            this.btnDelete.BackColor = Color.Transparent;
-            this.btnDelete.FlatAppearance.BorderColor = Color.FromArgb(255, 80, 80);
-            this.btnDelete.FlatStyle = FlatStyle.Flat;
-            this.btnDelete.ForeColor = Color.FromArgb(255, 80, 80);
-            this.btnDelete.Location = new Point(610, 185);
-            this.btnDelete.Size = new Size(170, 40);
-            this.btnDelete.Text = "🗑️ Удалить";
-
-            this.btnRefreshUsers.BackColor = Color.Transparent;
-            this.btnRefreshUsers.FlatAppearance.BorderColor = Color.FromArgb(180, 180, 200);
-            this.btnRefreshUsers.FlatStyle = FlatStyle.Flat;
-            this.btnRefreshUsers.ForeColor = Color.FromArgb(180, 180, 200);
-            this.btnRefreshUsers.Location = new Point(610, 500);
-            this.btnRefreshUsers.Size = new Size(170, 40);
+            this.btnAdd.UseVisualStyleBackColor = false;
+            // 
+            // btnEdit
+            // 
+            this.btnEdit.BackColor = System.Drawing.Color.Transparent;
+            this.btnEdit.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
+            this.btnEdit.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnEdit.Font = new System.Drawing.Font("Segoe UI", 10F);
+            this.btnEdit.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
+            this.btnEdit.Location = new System.Drawing.Point(600, 160);
+            this.btnEdit.Name = "btnEdit";
+            this.btnEdit.Size = new System.Drawing.Size(160, 40);
+            this.btnEdit.TabIndex = 5;
+            this.btnEdit.Text = "✏ Редактировать";
+            this.btnEdit.UseVisualStyleBackColor = false;
+            // 
+            // btnDelete
+            // 
+            this.btnDelete.BackColor = System.Drawing.Color.Transparent;
+            this.btnDelete.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(80)))), ((int)(((byte)(80)))));
+            this.btnDelete.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnDelete.Font = new System.Drawing.Font("Segoe UI", 10F);
+            this.btnDelete.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(80)))), ((int)(((byte)(80)))));
+            this.btnDelete.Location = new System.Drawing.Point(600, 215);
+            this.btnDelete.Name = "btnDelete";
+            this.btnDelete.Size = new System.Drawing.Size(160, 40);
+            this.btnDelete.TabIndex = 6;
+            this.btnDelete.Text = "🗑 Удалить";
+            this.btnDelete.UseVisualStyleBackColor = false;
+            // 
+            // btnRefreshUsers
+            // 
+            this.btnRefreshUsers.BackColor = System.Drawing.Color.Transparent;
+            this.btnRefreshUsers.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
+            this.btnRefreshUsers.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnRefreshUsers.Font = new System.Drawing.Font("Segoe UI", 10F);
+            this.btnRefreshUsers.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
+            this.btnRefreshUsers.Location = new System.Drawing.Point(600, 495);
+            this.btnRefreshUsers.Name = "btnRefreshUsers";
+            this.btnRefreshUsers.Size = new System.Drawing.Size(160, 40);
+            this.btnRefreshUsers.TabIndex = 7;
             this.btnRefreshUsers.Text = "🔄 Обновить";
-
+            this.btnRefreshUsers.UseVisualStyleBackColor = false;
             // 
             // tabHistory
             // 
+            this.tabHistory.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(45)))), ((int)(((byte)(58)))));
             this.tabHistory.Controls.Add(this.panelHistoryMain);
+            this.tabHistory.Location = new System.Drawing.Point(4, 24);
+            this.tabHistory.Name = "tabHistory";
+            this.tabHistory.Size = new System.Drawing.Size(852, 582);
+            this.tabHistory.TabIndex = 1;
             this.tabHistory.Text = "История сообщений";
-
             // 
             // panelHistoryMain
             // 
-            this.panelHistoryMain.BackColor = Color.FromArgb(45, 45, 58);
+            this.panelHistoryMain.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(45)))), ((int)(((byte)(58)))));
             this.panelHistoryMain.Controls.Add(this.lblTitleHistory);
             this.panelHistoryMain.Controls.Add(this.lblChat);
             this.panelHistoryMain.Controls.Add(this.cmbChat);
             this.panelHistoryMain.Controls.Add(this.lblPeriod);
             this.panelHistoryMain.Controls.Add(this.dtpStart);
             this.panelHistoryMain.Controls.Add(this.dtpEnd);
-            this.panelHistoryMain.Controls.Add(this.chkAllChats);
             this.panelHistoryMain.Controls.Add(this.btnLoadHistory);
             this.panelHistoryMain.Controls.Add(this.lstHistoryMessages);
             this.panelHistoryMain.Controls.Add(this.btnExport);
             this.panelHistoryMain.Controls.Add(this.btnClearHistory);
-            this.panelHistoryMain.Dock = DockStyle.Fill;
-            this.panelHistoryMain.Padding = new Padding(10);
-            this.panelHistoryMain.Size = new Size(1000, 700);
-
-            this.lblTitleHistory.Font = new Font("Segoe UI", 16F, FontStyle.Bold);
-            this.lblTitleHistory.ForeColor = Color.FromArgb(0, 229, 255);
-            this.lblTitleHistory.Location = new Point(10, 10);
-            this.lblTitleHistory.Size = new Size(960, 30);
+            this.panelHistoryMain.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.panelHistoryMain.Location = new System.Drawing.Point(0, 0);
+            this.panelHistoryMain.Name = "panelHistoryMain";
+            this.panelHistoryMain.Padding = new System.Windows.Forms.Padding(20);
+            this.panelHistoryMain.Size = new System.Drawing.Size(852, 582);
+            this.panelHistoryMain.TabIndex = 0;
+            // 
+            // lblTitleHistory
+            // 
+            this.lblTitleHistory.Font = new System.Drawing.Font("Segoe UI", 16F, System.Drawing.FontStyle.Bold);
+            this.lblTitleHistory.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
+            this.lblTitleHistory.Location = new System.Drawing.Point(20, 20);
+            this.lblTitleHistory.Name = "lblTitleHistory";
+            this.lblTitleHistory.Size = new System.Drawing.Size(812, 30);
+            this.lblTitleHistory.TabIndex = 0;
             this.lblTitleHistory.Text = "История сообщений";
-
+            // 
+            // lblChat
+            // 
             this.lblChat.AutoSize = true;
-            this.lblChat.ForeColor = Color.White;
-            this.lblChat.Location = new Point(10, 60);
+            this.lblChat.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            this.lblChat.ForeColor = System.Drawing.Color.White;
+            this.lblChat.Location = new System.Drawing.Point(20, 70);
+            this.lblChat.Name = "lblChat";
+            this.lblChat.Size = new System.Drawing.Size(30, 15);
+            this.lblChat.TabIndex = 1;
             this.lblChat.Text = "Чат:";
-
-            this.cmbChat.BackColor = Color.FromArgb(60, 60, 80);
-            this.cmbChat.DropDownStyle = ComboBoxStyle.DropDownList;
-            this.cmbChat.FlatStyle = FlatStyle.Flat;
-            this.cmbChat.ForeColor = Color.White;
-            this.cmbChat.Location = new Point(60, 57);
-            this.cmbChat.Size = new Size(250, 23);
-
+            // 
+            // cmbChat
+            // 
+            this.cmbChat.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(60)))), ((int)(((byte)(60)))), ((int)(((byte)(80)))));
+            this.cmbChat.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbChat.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.cmbChat.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.cmbChat.ForeColor = System.Drawing.Color.White;
+            this.cmbChat.Location = new System.Drawing.Point(60, 67);
+            this.cmbChat.Name = "cmbChat";
+            this.cmbChat.Size = new System.Drawing.Size(250, 23);
+            this.cmbChat.TabIndex = 2;
+            // 
+            // lblPeriod
+            // 
             this.lblPeriod.AutoSize = true;
-            this.lblPeriod.ForeColor = Color.White;
-            this.lblPeriod.Location = new Point(330, 60);
+            this.lblPeriod.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            this.lblPeriod.ForeColor = System.Drawing.Color.White;
+            this.lblPeriod.Location = new System.Drawing.Point(330, 70);
+            this.lblPeriod.Name = "lblPeriod";
+            this.lblPeriod.Size = new System.Drawing.Size(55, 15);
+            this.lblPeriod.TabIndex = 3;
             this.lblPeriod.Text = "Период:";
-
-            this.dtpStart.Format = DateTimePickerFormat.Short;
-            this.dtpStart.Location = new Point(390, 57);
-            this.dtpStart.Size = new Size(120, 23);
-
-            this.dtpEnd.Format = DateTimePickerFormat.Short;
-            this.dtpEnd.Location = new Point(520, 57);
-            this.dtpEnd.Size = new Size(120, 23);
-
-            this.chkAllChats.AutoSize = true;
-            this.chkAllChats.ForeColor = Color.White;
-            this.chkAllChats.Location = new Point(660, 59);
-            this.chkAllChats.Text = "Все чаты";
-
-            this.btnLoadHistory.BackColor = Color.FromArgb(0, 229, 255);
-            this.btnLoadHistory.FlatStyle = FlatStyle.Flat;
-            this.btnLoadHistory.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            this.btnLoadHistory.ForeColor = Color.Black;
-            this.btnLoadHistory.Location = new Point(760, 55);
-            this.btnLoadHistory.Size = new Size(120, 30);
+            // 
+            // dtpStart
+            // 
+            this.dtpStart.CalendarForeColor = System.Drawing.Color.White;
+            this.dtpStart.CalendarMonthBackground = System.Drawing.Color.FromArgb(((int)(((byte)(60)))), ((int)(((byte)(60)))), ((int)(((byte)(80)))));
+            this.dtpStart.CalendarTitleBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(45)))), ((int)(((byte)(58)))));
+            this.dtpStart.CalendarTitleForeColor = System.Drawing.Color.White;
+            this.dtpStart.CalendarTrailingForeColor = System.Drawing.Color.Gray;
+            this.dtpStart.Format = System.Windows.Forms.DateTimePickerFormat.Short;
+            this.dtpStart.Location = new System.Drawing.Point(390, 67);
+            this.dtpStart.Name = "dtpStart";
+            this.dtpStart.Size = new System.Drawing.Size(110, 23);
+            this.dtpStart.TabIndex = 4;
+            // 
+            // dtpEnd
+            // 
+            this.dtpEnd.CalendarForeColor = System.Drawing.Color.White;
+            this.dtpEnd.CalendarMonthBackground = System.Drawing.Color.FromArgb(((int)(((byte)(60)))), ((int)(((byte)(60)))), ((int)(((byte)(80)))));
+            this.dtpEnd.CalendarTitleBackColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(45)))), ((int)(((byte)(58)))));
+            this.dtpEnd.CalendarTitleForeColor = System.Drawing.Color.White;
+            this.dtpEnd.CalendarTrailingForeColor = System.Drawing.Color.Gray;
+            this.dtpEnd.Format = System.Windows.Forms.DateTimePickerFormat.Short;
+            this.dtpEnd.Location = new System.Drawing.Point(510, 67);
+            this.dtpEnd.Name = "dtpEnd";
+            this.dtpEnd.Size = new System.Drawing.Size(110, 23);
+            this.dtpEnd.TabIndex = 5;
+            // 
+            // btnLoadHistory
+            // 
+            this.btnLoadHistory.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
+            this.btnLoadHistory.FlatAppearance.BorderSize = 0;
+            this.btnLoadHistory.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnLoadHistory.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            this.btnLoadHistory.ForeColor = System.Drawing.Color.Black;
+            this.btnLoadHistory.Location = new System.Drawing.Point(650, 65);
+            this.btnLoadHistory.Name = "btnLoadHistory";
+            this.btnLoadHistory.Size = new System.Drawing.Size(110, 28);
+            this.btnLoadHistory.TabIndex = 7;
             this.btnLoadHistory.Text = "Загрузить";
-
+            this.btnLoadHistory.UseVisualStyleBackColor = false;
             // 
             // lstHistoryMessages
             // 
-            this.lstHistoryMessages.BackColor = Color.FromArgb(30, 30, 46);
-            this.lstHistoryMessages.BorderStyle = BorderStyle.None;
-            this.lstHistoryMessages.DrawMode = DrawMode.OwnerDrawVariable;
-            this.lstHistoryMessages.ForeColor = Color.White;
+            this.lstHistoryMessages.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(46)))));
+            this.lstHistoryMessages.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.lstHistoryMessages.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawVariable;
+            this.lstHistoryMessages.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.lstHistoryMessages.ForeColor = System.Drawing.Color.White;
             this.lstHistoryMessages.IntegralHeight = false;
-            this.lstHistoryMessages.Location = new Point(10, 100);
+            this.lstHistoryMessages.Location = new System.Drawing.Point(20, 110);
             this.lstHistoryMessages.Name = "lstHistoryMessages";
-            this.lstHistoryMessages.Size = new Size(960, 450);
+            this.lstHistoryMessages.Size = new System.Drawing.Size(812, 390);
             this.lstHistoryMessages.TabIndex = 8;
-            this.lstHistoryMessages.MeasureItem += new MeasureItemEventHandler(this.LstHistory_MeasureItem);
-            this.lstHistoryMessages.DrawItem += new DrawItemEventHandler(this.LstHistory_DrawItem);
-
             // 
             // btnExport
             // 
-            this.btnExport.BackColor = Color.Transparent;
-            this.btnExport.FlatAppearance.BorderColor = Color.FromArgb(0, 229, 255);
-            this.btnExport.FlatStyle = FlatStyle.Flat;
-            this.btnExport.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            this.btnExport.ForeColor = Color.FromArgb(0, 229, 255);
-            this.btnExport.Location = new Point(10, 570);
-            this.btnExport.Size = new Size(120, 40);
+            this.btnExport.BackColor = System.Drawing.Color.Transparent;
+            this.btnExport.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
+            this.btnExport.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnExport.Font = new System.Drawing.Font("Segoe UI", 10F);
+            this.btnExport.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
+            this.btnExport.Location = new System.Drawing.Point(20, 520);
+            this.btnExport.Name = "btnExport";
+            this.btnExport.Size = new System.Drawing.Size(120, 35);
+            this.btnExport.TabIndex = 9;
             this.btnExport.Text = "📁 Экспорт";
-
+            this.btnExport.UseVisualStyleBackColor = false;
             // 
             // btnClearHistory
             // 
-            this.btnClearHistory.BackColor = Color.Transparent;
-            this.btnClearHistory.FlatAppearance.BorderColor = Color.FromArgb(255, 80, 80);
-            this.btnClearHistory.FlatStyle = FlatStyle.Flat;
-            this.btnClearHistory.ForeColor = Color.FromArgb(255, 80, 80);
-            this.btnClearHistory.Location = new Point(140, 570);
-            this.btnClearHistory.Size = new Size(120, 40);
-            this.btnClearHistory.Text = "🗑️ Очистить";
-
+            this.btnClearHistory.BackColor = System.Drawing.Color.Transparent;
+            this.btnClearHistory.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(80)))), ((int)(((byte)(80)))));
+            this.btnClearHistory.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnClearHistory.Font = new System.Drawing.Font("Segoe UI", 10F);
+            this.btnClearHistory.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(80)))), ((int)(((byte)(80)))));
+            this.btnClearHistory.Location = new System.Drawing.Point(150, 520);
+            this.btnClearHistory.Name = "btnClearHistory";
+            this.btnClearHistory.Size = new System.Drawing.Size(120, 35);
+            this.btnClearHistory.TabIndex = 10;
+            this.btnClearHistory.Text = "🗑 Очистить";
+            this.btnClearHistory.UseVisualStyleBackColor = false;
             // 
             // tabChats
             // 
+            this.tabChats.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(45)))), ((int)(((byte)(58)))));
             this.tabChats.Controls.Add(this.panelChatsMain);
+            this.tabChats.Location = new System.Drawing.Point(4, 24);
+            this.tabChats.Name = "tabChats";
+            this.tabChats.Size = new System.Drawing.Size(852, 582);
+            this.tabChats.TabIndex = 2;
             this.tabChats.Text = "Управление чатами";
-
             // 
             // panelChatsMain
             // 
-            this.panelChatsMain.BackColor = Color.FromArgb(45, 45, 58);
+            this.panelChatsMain.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(45)))), ((int)(((byte)(58)))));
             this.panelChatsMain.Controls.Add(this.lblTitleChats);
-            this.panelChatsMain.Controls.Add(this.dgvChats);
+            this.panelChatsMain.Controls.Add(this.tvChats);
             this.panelChatsMain.Controls.Add(this.btnDeleteChat);
             this.panelChatsMain.Controls.Add(this.btnRefreshChats);
             this.panelChatsMain.Controls.Add(this.btnViewParticipants);
-            this.panelChatsMain.Dock = DockStyle.Fill;
-            this.panelChatsMain.Padding = new Padding(10);
-            this.panelChatsMain.Size = new Size(1000, 700);
-
-            this.lblTitleChats.Font = new Font("Segoe UI", 16F, FontStyle.Bold);
-            this.lblTitleChats.ForeColor = Color.FromArgb(0, 229, 255);
-            this.lblTitleChats.Location = new Point(10, 10);
-            this.lblTitleChats.Size = new Size(960, 30);
+            this.panelChatsMain.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.panelChatsMain.Location = new System.Drawing.Point(0, 0);
+            this.panelChatsMain.Name = "panelChatsMain";
+            this.panelChatsMain.Padding = new System.Windows.Forms.Padding(20);
+            this.panelChatsMain.Size = new System.Drawing.Size(852, 582);
+            this.panelChatsMain.TabIndex = 0;
+            // 
+            // lblTitleChats
+            // 
+            this.lblTitleChats.Font = new System.Drawing.Font("Segoe UI", 16F, System.Drawing.FontStyle.Bold);
+            this.lblTitleChats.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
+            this.lblTitleChats.Location = new System.Drawing.Point(20, 20);
+            this.lblTitleChats.Name = "lblTitleChats";
+            this.lblTitleChats.Size = new System.Drawing.Size(812, 30);
+            this.lblTitleChats.TabIndex = 0;
             this.lblTitleChats.Text = "Список всех чатов";
-
-            this.dgvChats.BackgroundColor = Color.White;
-            this.dgvChats.BorderStyle = BorderStyle.Fixed3D;
-            this.dgvChats.Location = new Point(10, 50);
-            this.dgvChats.Size = new Size(800, 500);
-            this.dgvChats.ReadOnly = true;
-            this.dgvChats.RowHeadersVisible = false;
-            this.dgvChats.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            this.dgvChats.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-
-            this.btnDeleteChat.BackColor = Color.Transparent;
-            this.btnDeleteChat.FlatAppearance.BorderColor = Color.FromArgb(255, 80, 80);
-            this.btnDeleteChat.FlatStyle = FlatStyle.Flat;
-            this.btnDeleteChat.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            this.btnDeleteChat.ForeColor = Color.FromArgb(255, 80, 80);
-            this.btnDeleteChat.Location = new Point(830, 100);
-            this.btnDeleteChat.Size = new Size(150, 40);
-            this.btnDeleteChat.Text = "🗑️ Удалить чат";
-
-            this.btnRefreshChats.BackColor = Color.Transparent;
-            this.btnRefreshChats.FlatAppearance.BorderColor = Color.FromArgb(0, 229, 255);
-            this.btnRefreshChats.FlatStyle = FlatStyle.Flat;
-            this.btnRefreshChats.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            this.btnRefreshChats.ForeColor = Color.FromArgb(0, 229, 255);
-            this.btnRefreshChats.Location = new Point(830, 50);
-            this.btnRefreshChats.Size = new Size(150, 40);
+            // 
+            // tvChats
+            // 
+            this.tvChats.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(60)))), ((int)(((byte)(60)))), ((int)(((byte)(80)))));
+            this.tvChats.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.tvChats.Font = new System.Drawing.Font("Segoe UI", 10F);
+            this.tvChats.ForeColor = System.Drawing.Color.White;
+            this.tvChats.FullRowSelect = true;
+            this.tvChats.HideSelection = false;
+            this.tvChats.Location = new System.Drawing.Point(20, 65);
+            this.tvChats.Name = "tvChats";
+            this.tvChats.Size = new System.Drawing.Size(550, 460);
+            this.tvChats.TabIndex = 1;
+            // 
+            // btnDeleteChat
+            // 
+            this.btnDeleteChat.BackColor = System.Drawing.Color.Transparent;
+            this.btnDeleteChat.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(80)))), ((int)(((byte)(80)))));
+            this.btnDeleteChat.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnDeleteChat.Font = new System.Drawing.Font("Segoe UI", 10F);
+            this.btnDeleteChat.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(80)))), ((int)(((byte)(80)))));
+            this.btnDeleteChat.Location = new System.Drawing.Point(600, 120);
+            this.btnDeleteChat.Name = "btnDeleteChat";
+            this.btnDeleteChat.Size = new System.Drawing.Size(160, 40);
+            this.btnDeleteChat.TabIndex = 2;
+            this.btnDeleteChat.Text = "🗑 Удалить чат";
+            this.btnDeleteChat.UseVisualStyleBackColor = false;
+            // 
+            // btnRefreshChats
+            // 
+            this.btnRefreshChats.BackColor = System.Drawing.Color.Transparent;
+            this.btnRefreshChats.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
+            this.btnRefreshChats.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnRefreshChats.Font = new System.Drawing.Font("Segoe UI", 10F);
+            this.btnRefreshChats.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
+            this.btnRefreshChats.Location = new System.Drawing.Point(600, 485);
+            this.btnRefreshChats.Name = "btnRefreshChats";
+            this.btnRefreshChats.Size = new System.Drawing.Size(160, 40);
+            this.btnRefreshChats.TabIndex = 3;
             this.btnRefreshChats.Text = "🔄 Обновить";
-
-            this.btnViewParticipants.BackColor = Color.Transparent;
-            this.btnViewParticipants.FlatAppearance.BorderColor = Color.FromArgb(0, 229, 255);
-            this.btnViewParticipants.FlatStyle = FlatStyle.Flat;
-            this.btnViewParticipants.Font = new Font("Segoe UI", 9F);
-            this.btnViewParticipants.ForeColor = Color.FromArgb(0, 229, 255);
-            this.btnViewParticipants.Location = new Point(830, 150);
-            this.btnViewParticipants.Size = new Size(150, 40);
+            this.btnRefreshChats.UseVisualStyleBackColor = false;
+            // 
+            // btnViewParticipants
+            // 
+            this.btnViewParticipants.BackColor = System.Drawing.Color.Transparent;
+            this.btnViewParticipants.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
+            this.btnViewParticipants.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnViewParticipants.Font = new System.Drawing.Font("Segoe UI", 10F);
+            this.btnViewParticipants.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
+            this.btnViewParticipants.Location = new System.Drawing.Point(600, 65);
+            this.btnViewParticipants.Name = "btnViewParticipants";
+            this.btnViewParticipants.Size = new System.Drawing.Size(160, 40);
+            this.btnViewParticipants.TabIndex = 4;
             this.btnViewParticipants.Text = "👥 Участники";
-
+            this.btnViewParticipants.UseVisualStyleBackColor = false;
             // 
             // AdminDashboardForm
             // 
-            this.AutoScaleDimensions = new SizeF(7F, 15F);
-            this.AutoScaleMode = AutoScaleMode.Font;
-            this.BackColor = Color.FromArgb(30, 30, 46);
-            this.ClientSize = new Size(1000, 700);
-            this.Controls.Add(this.tabControl);
-            this.FormBorderStyle = FormBorderStyle.FixedDialog;
+            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(46)))));
+            this.ClientSize = new System.Drawing.Size(900, 650);
+            this.Controls.Add(this.panelMain);
+            this.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
+            this.MinimizeBox = false;
             this.Name = "AdminDashboardForm";
-            this.StartPosition = FormStartPosition.CenterParent;
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
             this.Text = "Панель администратора";
-
+            this.panelMain.ResumeLayout(false);
             this.tabControl.ResumeLayout(false);
             this.tabUsers.ResumeLayout(false);
             this.panelUserMain.ResumeLayout(false);
@@ -377,8 +518,8 @@ namespace Messenger.Client
             this.panelHistoryMain.PerformLayout();
             this.tabChats.ResumeLayout(false);
             this.panelChatsMain.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.dgvChats)).EndInit();
             this.ResumeLayout(false);
+
         }
     }
 }

@@ -1453,7 +1453,9 @@ namespace Messenger.Client
             lstMessages.Focus();
 
             int index = lstMessages.IndexFromPoint(e.Location);
-            bool isMessage = (index >= 0 && lstMessages.Items[index] is Shared.Message);
+            // Безопасная проверка
+            bool isValidIndex = (index >= 0 && index < lstMessages.Items.Count);
+            bool isMessage = isValidIndex && (lstMessages.Items[index] is Shared.Message);
 
             // Левая кнопка: логика выделения
             if (e.Button == MouseButtons.Left)
@@ -1466,6 +1468,7 @@ namespace Messenger.Client
                     return;
                 }
 
+                // Далее работаем с валидным индексом
                 if (ModifierKeys.HasFlag(Keys.Control))
                 {
                     if (selectedMessageIndices.Contains(index))
@@ -1492,12 +1495,11 @@ namespace Messenger.Client
                 }
                 lstMessages.Invalidate();
             }
-            // Правая кнопка: выделяем сообщение под курсором (если нужно) и показываем меню
+            // Правая кнопка
             else if (e.Button == MouseButtons.Right)
             {
                 if (isMessage)
                 {
-                    // Если сообщение ещё не выделено – выделяем его одно
                     if (!selectedMessageIndices.Contains(index))
                     {
                         selectedMessageIndices.Clear();
@@ -1505,7 +1507,6 @@ namespace Messenger.Client
                         lastSelectedIndex = index;
                         lstMessages.Invalidate();
                     }
-                    // Показываем контекстное меню
                     ShowContextMenu(e.Location);
                 }
             }
@@ -1514,9 +1515,10 @@ namespace Messenger.Client
         private void ShowContextMenu(Point location)
         {
             var selectedMsgs = selectedMessageIndices
-                .Select(i => lstMessages.Items[i] as Shared.Message)
-                .Where(m => m != null)
-                .ToList();
+            .Where(i => i >= 0 && i < lstMessages.Items.Count && lstMessages.Items[i] is Shared.Message)
+            .Select(i => lstMessages.Items[i] as Shared.Message)
+            .Where(m => m != null)
+            .ToList();
 
             if (selectedMsgs.Count == 0) return;
 

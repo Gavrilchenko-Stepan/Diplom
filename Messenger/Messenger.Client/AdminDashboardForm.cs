@@ -15,6 +15,7 @@ namespace Messenger.Client
     {
         private NetworkClient networkClient;
         private int currentUserId;
+        private int? _currentChatId = null;
 
         // Данные для пользователей
         private List<User> allUsers;
@@ -27,8 +28,6 @@ namespace Messenger.Client
         // Данные для чатов
         private List<Chat> allChatsList;
 
-        private int? _pendingSelectedChatId = null;
-
         // Шрифты для сообщений
         private Font messageSenderFont;
         private Font messageTextFont;
@@ -38,6 +37,10 @@ namespace Messenger.Client
         public AdminDashboardForm(NetworkClient client, int userId)
         {
             InitializeComponent();
+
+            this.Load += (s, e) => SetRoundedRegion(this, 20);
+            this.tabControl.DrawMode = TabDrawMode.OwnerDrawFixed;
+
             cmbChat.DataSource = null;
 
             // Инициализация шрифтов
@@ -48,6 +51,15 @@ namespace Messenger.Client
 
             networkClient = client;
             currentUserId = userId;
+
+            cmbChat.SelectedIndexChanged += (s, e) =>
+            {
+                if (cmbChat.SelectedItem is Chat selectedChat)
+                    _currentChatId = selectedChat.Id;
+                else
+                    _currentChatId = null;
+            };
+
             networkClient.OnPacketReceived += OnPacketReceived;
 
             // Подписки на кнопки
@@ -67,19 +79,15 @@ namespace Messenger.Client
 
             txtSearch.TextChanged += TxtSearch_TextChanged;
             tvUsers.NodeMouseDoubleClick += TvUsers_NodeMouseDoubleClick;
-            chkAllChats.CheckedChanged += (s, e) => { if (chkAllChats.Checked) cmbChat.SelectedIndex = -1; };
-            cmbChat.SelectedIndexChanged += (s, e) => chkAllChats.Checked = false;
+
+
 
             LoadData();
         }
 
         private void LoadData()
         {
-            var selectedChat = cmbChat.SelectedItem as Chat;
-            if (selectedChat != null)
-                _pendingSelectedChatId = selectedChat.Id;
-            else
-                _pendingSelectedChatId = null;
+            _selectedChatIdForChats = (tvChats.SelectedNode?.Tag as Chat)?.Id;
 
             networkClient.SendPacket(new NetworkPacket { Command = Shared.CommandType.GetAllUsers });
             networkClient.SendPacket(new NetworkPacket { Command = Shared.CommandType.GetDepartments });
@@ -113,25 +121,28 @@ namespace Messenger.Client
                         allChats = chats;
                         allChatsList = chats;
 
+                        // Запоминаем текущий выбранный ID до пересоздания источника
+                        int? previouslySelectedChatId = _currentChatId;
+
                         cmbChat.DataSource = null;
                         cmbChat.DataSource = allChats;
                         cmbChat.DisplayMember = "Name";
                         cmbChat.ValueMember = "Id";
 
-                        if (_pendingSelectedChatId.HasValue)
+                        // Восстанавливаем выбранный чат по ID
+                        if (previouslySelectedChatId.HasValue && allChats.Any(c => c.Id == previouslySelectedChatId.Value))
                         {
-                            var chatToSelect = allChats.FirstOrDefault(c => c.Id == _pendingSelectedChatId.Value);
-                            if (chatToSelect != null)
-                                cmbChat.SelectedItem = chatToSelect;
-                            _pendingSelectedChatId = null;
+                            cmbChat.SelectedValue = previouslySelectedChatId.Value;
                         }
-
-                        if (cmbChat.SelectedIndex == -1 && cmbChat.Items.Count > 0)
+                        else if (cmbChat.Items.Count > 0)
                         {
+                            // Если восстановить не удалось, выбираем первый и синхронизируем _currentChatId
                             cmbChat.SelectedIndex = 0;
+                            if (cmbChat.SelectedItem is Chat firstChat)
+                                _currentChatId = firstChat.Id;
                         }
 
-                        UpdateChatsGrid();
+                        UpdateChatsTree();
                         break;
                     case Shared.CommandType.MessagesList:
                         var jsonMsgs = ((JsonElement)packet.Data).GetRawText();
@@ -149,6 +160,19 @@ namespace Messenger.Client
             catch (Exception ex)
             {
                 MessageBox.Show($"Ошибка: {ex.Message}");
+            }
+        }
+
+        private void SetRoundedRegion(Control ctrl, int radius)
+        {
+            using (var path = new System.Drawing.Drawing2D.GraphicsPath())
+            {
+                path.AddArc(0, 0, radius, radius, 180, 90);
+                path.AddArc(ctrl.Width - radius, 0, radius, radius, 270, 90);
+                path.AddArc(ctrl.Width - radius, ctrl.Height - radius, radius, radius, 0, 90);
+                path.AddArc(0, ctrl.Height - radius, radius, radius, 90, 90);
+                path.CloseFigure();
+                ctrl.Region = new Region(path);
             }
         }
 
@@ -246,10 +270,13 @@ namespace Messenger.Client
         // ================== История сообщений ==================
         private void BtnLoadHistory_Click(object sender, EventArgs e)
         {
-            int? chatId = null;
-            if (!chkAllChats.Checked && cmbChat.SelectedItem != null)
-                chatId = (int)cmbChat.SelectedValue;
+            if (cmbChat.SelectedItem == null)
+            {
+                MessageBox.Show("Выберите чат для просмотра истории.", "Внимание", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
 
+            int chatId = (int)cmbChat.SelectedValue;
             var filter = new
             {
                 chatId = chatId,
@@ -417,11 +444,16 @@ namespace Messenger.Client
 
         private void BtnClearHistory_Click(object sender, EventArgs e)
         {
+            if (cmbChat.SelectedItem == null)
+            {
+                MessageBox.Show("Выберите чат для очистки истории.", "Внимание", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             if (MessageBox.Show("Удалить сообщения старше выбранной даты? (Без возможности восстановления!)", "Подтверждение", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
                 return;
-            int? chatId = null;
-            if (!chkAllChats.Checked && cmbChat.SelectedItem != null)
-                chatId = (int)cmbChat.SelectedValue;
+
+            int chatId = (int)cmbChat.SelectedValue;
             var olderThan = dtpEnd.Value.Date;
             var data = new { chatId = chatId, olderThan = olderThan };
             networkClient.SendPacket(new NetworkPacket
@@ -432,75 +464,113 @@ namespace Messenger.Client
         }
 
         // ================== Управление чатами ==================
-        private void UpdateChatsGrid()
+        private void UpdateChatsTree()
         {
             if (allChatsList == null) return;
 
-            int? selectedChatId = null;
-            if (dgvChats.SelectedRows.Count > 0)
+            tvChats.BeginUpdate();
+            try
             {
-                var cell = dgvChats.SelectedRows[0].Cells[0];
-                if (cell.Value != null && cell.Value != DBNull.Value)
-                    selectedChatId = Convert.ToInt32(cell.Value);
-            }
+                tvChats.Nodes.Clear();
 
-            dgvChats.Rows.Clear();
-            dgvChats.Columns.Clear();
-            dgvChats.Columns.Add("Id", "ID");
-            dgvChats.Columns.Add("Name", "Название");
-            dgvChats.Columns.Add("Type", "Тип");
-            dgvChats.Columns[0].Visible = false;
+                // Группировка с русскими названиями (см. п.4)
+                var groups = allChatsList.GroupBy(c => GetChatTypeDisplayName(c.Type))
+                                          .OrderBy(g => g.Key);
 
-            foreach (var chat in allChatsList)
-                dgvChats.Rows.Add(chat.Id, chat.Name, chat.Type);
-
-            dgvChats.ClearSelection();
-            dgvChats.CurrentCell = null;
-
-            if (selectedChatId.HasValue)
-            {
-                foreach (DataGridViewRow row in dgvChats.Rows)
+                foreach (var group in groups)
                 {
-                    if (Convert.ToInt32(row.Cells[0].Value) == selectedChatId.Value)
+                    TreeNode groupNode = new TreeNode(group.Key);
+                    groupNode.ForeColor = Color.White;
+                    groupNode.Tag = null;
+
+                    foreach (var chat in group.OrderBy(c => c.Name))
                     {
-                        row.Selected = true;
-                        if (row.Cells.Count > 1)
-                            dgvChats.CurrentCell = row.Cells[1];
-                        break;
+                        TreeNode chatNode = new TreeNode(chat.Name);
+                        chatNode.Tag = chat;
+                        chatNode.ForeColor = Color.White;
+                        groupNode.Nodes.Add(chatNode);
+                    }
+
+                    tvChats.Nodes.Add(groupNode);
+                }
+
+                tvChats.ExpandAll();
+
+                if (_selectedChatIdForChats.HasValue)
+                {
+                    SelectChatNodeById(_selectedChatIdForChats.Value);
+                    _selectedChatIdForChats = null;
+                }
+            }
+            finally
+            {
+                tvChats.EndUpdate();
+            }
+        }
+
+        private string GetChatTypeDisplayName(ChatType type)
+        {
+            switch (type)
+            {
+                case ChatType.Private: return "Личные чаты";
+                case ChatType.Group: return "Групповые чаты";
+                case ChatType.Department: return "Чаты отделов";
+                default: return type.ToString();
+            }
+        }
+
+        private int? _selectedChatIdForChats = null;
+
+        private void SelectChatNodeById(int chatId)
+        {
+            foreach (TreeNode groupNode in tvChats.Nodes)
+            {
+                foreach (TreeNode chatNode in groupNode.Nodes)
+                {
+                    Chat chat = chatNode.Tag as Chat;
+                    if (chat != null && chat.Id == chatId)
+                    {
+                        tvChats.SelectedNode = chatNode;
+                        return;
                     }
                 }
             }
-
-            dgvChats.AutoResizeColumns();
         }
 
         private void BtnRefreshChats_Click(object sender, EventArgs e) => LoadData();
 
         private void BtnDeleteChat_Click(object sender, EventArgs e)
         {
-            if (dgvChats.SelectedRows.Count == 0)
+            // Получаем выбранный узел и извлекаем Chat через as
+            var selectedNode = tvChats.SelectedNode;
+            var selectedChat = selectedNode?.Tag as Chat;
+
+            if (selectedChat == null)
             {
-                MessageBox.Show("Выберите чат для удаления.");
+                MessageBox.Show("Выберите чат для удаления.", "Внимание", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-            int chatId = Convert.ToInt32(dgvChats.SelectedRows[0].Cells[0].Value);
-            string chatName = dgvChats.SelectedRows[0].Cells[1].Value.ToString();
-            if (MessageBox.Show($"Удалить чат \"{chatName}\"?", "Подтверждение", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+
+            if (MessageBox.Show($"Удалить чат \"{selectedChat.Name}\"?", "Подтверждение",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
             {
-                networkClient.SendPacket(new NetworkPacket { Command = Shared.CommandType.DeleteChat, Data = chatId });
+                networkClient.SendPacket(new NetworkPacket { Command = Shared.CommandType.DeleteChat, Data = selectedChat.Id });
                 LoadData();
             }
         }
 
         private void BtnViewParticipants_Click(object sender, EventArgs e)
         {
-            if (dgvChats.SelectedRows.Count == 0)
+            var selectedNode = tvChats.SelectedNode;
+            var selectedChat = selectedNode?.Tag as Chat;
+
+            if (selectedChat == null)
             {
-                MessageBox.Show("Выберите чат для просмотра участников.");
+                MessageBox.Show("Выберите чат для просмотра участников.", "Внимание", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-            int chatId = Convert.ToInt32(dgvChats.SelectedRows[0].Cells[0].Value);
-            using (var form = new ManageParticipantsForm(chatId, currentUserId, networkClient))
+
+            using (var form = new ManageParticipantsForm(selectedChat.Id, currentUserId, networkClient))
                 form.ShowDialog();
         }
 
