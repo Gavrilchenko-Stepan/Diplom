@@ -52,6 +52,12 @@ namespace Messenger.Client
         private System.Windows.Forms.Label lblLastSeen;
         private System.Windows.Forms.Label lblTyping;
 
+        private System.Windows.Forms.Panel chatContainer;
+        private System.Windows.Forms.Panel welcomePanel;       // панель с приветствием
+        private System.Windows.Forms.Label lblWelcomeTitle;
+        private System.Windows.Forms.Label lblWelcomeMessage;
+        private System.Windows.Forms.Button btnHideChat;       // кнопка скрытия чата
+
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))
@@ -99,6 +105,9 @@ namespace Messenger.Client
             this.lblTotalUsers = new System.Windows.Forms.Label();
             this.lblOnlineCount = new System.Windows.Forms.Label();
             this.panelRight = new System.Windows.Forms.Panel();
+            this.chatContainer = new System.Windows.Forms.Panel();
+            this.chatContainer.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.chatContainer.Visible = false;
             this.lstMessages = new System.Windows.Forms.ListBox();
             this.panelChatHeader = new System.Windows.Forms.Panel();
             this.picChatAvatar = new System.Windows.Forms.PictureBox();
@@ -385,15 +394,26 @@ namespace Messenger.Client
             // panelRight
             // 
             this.panelRight.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(46)))));
-            this.panelRight.Controls.Add(this.lstMessages);
-            this.panelRight.Controls.Add(this.panelChatHeader);
-            this.panelRight.Controls.Add(this.panelMessageInput);
             this.panelRight.Dock = System.Windows.Forms.DockStyle.Fill;
             this.panelRight.Location = new System.Drawing.Point(350, 100);
+            this.panelRight.Controls.Add(this.chatContainer);
+            this.panelRight.Controls.Add(this.welcomePanel);
+            this.panelRight.Controls.SetChildIndex(this.chatContainer, 0);
+            this.panelRight.Controls.SetChildIndex(this.welcomePanel, 0);
             this.panelRight.Name = "panelRight";
             this.panelRight.Padding = new System.Windows.Forms.Padding(10);
             this.panelRight.Size = new System.Drawing.Size(850, 575);
             this.panelRight.TabIndex = 0;
+            // 
+            // chatContainer – контейнер для всей переписки (сообщения, поле ввода, заголовок)
+            // 
+            this.chatContainer = new System.Windows.Forms.Panel();
+            this.chatContainer.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.chatContainer.Visible = false;   // изначально скрыт, пока не выбран чат
+            this.chatContainer.BackColor = System.Drawing.Color.FromArgb(30, 30, 46);
+            this.chatContainer.Controls.Add(this.panelChatHeader);
+            this.chatContainer.Controls.Add(this.lstMessages);
+            this.chatContainer.Controls.Add(this.panelMessageInput);
             // 
             // lstMessages
             // 
@@ -417,11 +437,27 @@ namespace Messenger.Client
             this.panelChatHeader.Controls.Add(this.lblChatName);
             this.panelChatHeader.Controls.Add(this.btnViewParticipants);
             this.panelChatHeader.Controls.Add(this.lblLastSeen);
+            this.panelChatHeader.Controls.Add(this.btnHideChat);
             this.panelChatHeader.Dock = System.Windows.Forms.DockStyle.Top;
             this.panelChatHeader.Location = new System.Drawing.Point(10, 10);
             this.panelChatHeader.Name = "panelChatHeader";
             this.panelChatHeader.Size = new System.Drawing.Size(830, 70);
             this.panelChatHeader.TabIndex = 0;
+            // 
+            // btnHideChat – кнопка «✖» для скрытия панели чата
+            // 
+            this.btnHideChat = new System.Windows.Forms.Button();
+            this.btnHideChat.Text = "✖";
+            this.btnHideChat.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnHideChat.FlatAppearance.BorderSize = 0;
+            this.btnHideChat.BackColor = System.Drawing.Color.Transparent;
+            this.btnHideChat.ForeColor = System.Drawing.Color.White;
+            this.btnHideChat.Font = new System.Drawing.Font("Segoe UI", 10F);
+            this.btnHideChat.Size = new System.Drawing.Size(30, 30);
+            this.btnHideChat.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnHideChat.Location = new System.Drawing.Point(780, 15);  // например, справа
+            this.btnHideChat.Click += new System.EventHandler(this.HideCurrentChat);
+            // 
             // 
             // picChatAvatar
             // 
@@ -466,6 +502,41 @@ namespace Messenger.Client
             this.lblLastSeen.Name = "lblLastSeen";
             this.lblLastSeen.Size = new System.Drawing.Size(300, 20);
             this.lblLastSeen.TabIndex = 6;
+            // 
+            // welcomePanel – панель с приветствием и инструкцией (показывается, когда чат не выбран)
+            // 
+            this.welcomePanel = new System.Windows.Forms.Panel();
+            this.welcomePanel.BackColor = System.Drawing.Color.FromArgb(30, 30, 46);
+            this.welcomePanel.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.welcomePanel.Visible = true;
+            this.welcomePanel.Controls.Add(this.lblWelcomeTitle);
+            this.welcomePanel.Controls.Add(this.lblWelcomeMessage);
+            // 
+            // lblWelcomeTitle – заголовок приветствия
+            // 
+            this.lblWelcomeTitle = new System.Windows.Forms.Label();
+            this.lblWelcomeTitle.Font = new System.Drawing.Font("Segoe UI", 24F, System.Drawing.FontStyle.Bold);
+            this.lblWelcomeTitle.ForeColor = System.Drawing.Color.FromArgb(0, 229, 255);
+            this.lblWelcomeTitle.Text = "Добро пожаловать!";
+            this.lblWelcomeTitle.Dock = System.Windows.Forms.DockStyle.Top;
+            this.lblWelcomeTitle.Height = 100;
+            this.lblWelcomeTitle.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            // 
+            // lblWelcomeMessage – текст инструкции
+            // 
+            this.lblWelcomeMessage = new System.Windows.Forms.Label();
+            this.lblWelcomeMessage.Font = new System.Drawing.Font("Segoe UI", 12F);
+            this.lblWelcomeMessage.ForeColor = System.Drawing.Color.White;
+            this.lblWelcomeMessage.Text =
+                "Выберите чат из списка слева, чтобы начать общение.\n\n" +
+                "• Создавайте новые чаты с сотрудниками\n" +
+                "• Участвуйте в групповых обсуждениях\n" +
+                "• Просматривайте историю сообщений\n" +
+                "• Редактируйте и удаляйте свои сообщения\n" +
+                "• Администраторы могут управлять пользователями и чатами";
+            this.lblWelcomeMessage.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.lblWelcomeMessage.Padding = new System.Windows.Forms.Padding(30);
+            this.lblWelcomeMessage.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // panelMessageInput
             // 

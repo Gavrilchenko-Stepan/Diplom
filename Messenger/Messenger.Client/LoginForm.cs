@@ -101,6 +101,7 @@ namespace Messenger.Client
             lblStatus.Visible = true;
             lblError.Visible = false;
 
+            // Запускаем подключение
             var connectTask = networkClient.Connect(txtServerIP.Text);
             var timeoutTask = Task.Delay(5000);
             var completedTask = await Task.WhenAny(connectTask, timeoutTask);
@@ -113,7 +114,8 @@ namespace Messenger.Client
                 return;
             }
 
-            bool connected = await networkClient.Connect(txtServerIP.Text);
+            // Используем результат уже запущенной задачи, а не создаём новую
+            bool connected = await connectTask;
             if (!connected)
             {
                 ShowError("Не удалось подключиться к серверу");
@@ -122,14 +124,7 @@ namespace Messenger.Client
             }
 
             lblStatus.Text = "Отправка данных...";
-            networkClient.SendPacket(new NetworkPacket
-            {
-                Command = Shared.CommandType.Login,
-                Data = new { username = txtUsername.Text, password = txtPassword.Text }
-            });
-
             string hashedPassword = SecurityHelper.HashPassword(txtPassword.Text);
-
             networkClient.SendPacket(new NetworkPacket
             {
                 Command = Shared.CommandType.Login,

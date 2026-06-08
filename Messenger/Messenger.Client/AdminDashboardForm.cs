@@ -194,6 +194,12 @@ namespace Messenger.Client
             dgvDepartments.DataSource = null;
             dgvDepartments.DataSource = departments;
 
+            // Скрываем служебные колонки
+            if (dgvDepartments.Columns["Id"] != null)
+                dgvDepartments.Columns["Id"].Visible = false;
+            if (dgvDepartments.Columns["ChatId"] != null)
+                dgvDepartments.Columns["ChatId"].Visible = false;
+
             // Настройка заголовков
             if (dgvDepartments.Columns["Name"] != null)
                 dgvDepartments.Columns["Name"].HeaderText = "Название отдела";

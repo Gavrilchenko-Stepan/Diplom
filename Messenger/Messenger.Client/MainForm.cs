@@ -6,6 +6,7 @@ using System.Data;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -47,11 +48,18 @@ namespace Messenger.Client
         private const int messagePadding = 10;
         private const int messageMargin = 20;
 
+        private IniFile ini;
+        private const string INI_SECTION = "MainForm";
+        private const string KEY_LAST_CHAT = "LastChatId";
+
         public MainForm()
         {
             InitializeComponent();
 
-            this.FormBorderStyle = FormBorderStyle.Sizable;   // разрешаем изменение размера
+            this.FormBorderStyle = FormBorderStyle.FixedSingle;
+            this.MaximizeBox = false;
+            this.WindowState = FormWindowState.Normal;
+
             this.Load += (s, e) => UpdateFormRegion();
             this.Resize += (s, e) => UpdateFormRegion();
             this.ResizeEnd += (s, e) => UpdateFormRegion();
@@ -187,6 +195,24 @@ namespace Messenger.Client
             // 4. Для красоты — меняем цвет крестика при наведении мыши
             lblClearSearch.MouseEnter += (sender, e) => lblClearSearch.ForeColor = Color.White;
             lblClearSearch.MouseLeave += (sender, e) => lblClearSearch.ForeColor = Color.Gray;
+
+            this.welcomePanel.Visible = true;
+            this.chatContainer.Visible = false;
+
+            var contextMenu = new ContextMenuStrip();
+            var leaveChatMenuItem = new ToolStripMenuItem("🚪 Покинуть чат");
+            leaveChatMenuItem.Click += LeaveChatMenuItem_Click;
+            contextMenu.Items.Add(leaveChatMenuItem);
+            lstChats.ContextMenuStrip = contextMenu;
+
+            // Подписка на событие Opening для динамической блокировки пункта меню
+            contextMenu.Opening += (s, ev) =>
+            {
+                if (lstChats.SelectedItem is Chat chat && currentUser != null)
+                {
+                    leaveChatMenuItem.Enabled = !(chat.Type == ChatType.Department && !currentUser.IsAdmin);
+                }
+            };
         }
 
         private void UpdateFormRegion()
@@ -315,6 +341,12 @@ namespace Messenger.Client
                     networkClient.OnPacketReceived += OnPacketReceived;
                     networkClient.OnDisconnected += OnDisconnected;
 
+                    string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                    string configDir = Path.Combine(appData, "MessengerClient");
+                    Directory.CreateDirectory(configDir);
+                    string iniPath = Path.Combine(configDir, "client.ini");
+                    ini = new IniFile(iniPath);
+
                     UpdateUIAfterLogin();
                     LoadChats();
                     refreshTimer = new Timer { Interval = 3000 };
@@ -432,6 +464,7 @@ namespace Messenger.Client
                             lblChatName.Text = "Выберите чат";
                             lstMessages.Items.Clear();
                             btnSend.Enabled = false;
+                            ShowChatPanel(false);
                         }
 
                         if (currentChat != null)
@@ -442,6 +475,21 @@ namespace Messenger.Client
                                 currentChat = refreshedChat;
                                 UpdateCurrentChatHeader();
                             }
+                        }
+
+                        // Восстанавливаем последний чат
+                        int lastId = LoadLastChatId();
+                        if (lastId > 0)
+                        {
+                            var lastChat = chats.FirstOrDefault(c => c.Id == lastId);
+                            if (lastChat != null)
+                                lstChats.SelectedItem = lastChat;
+                            else
+                                ShowChatPanel(false);
+                        }
+                        else
+                        {
+                            ShowChatPanel(false);
                         }
                         break;
 
@@ -666,6 +714,9 @@ namespace Messenger.Client
 
             if (!(lstChats.SelectedItem is Chat chat)) return;
             currentChat = chat;
+
+            SaveLastChat();
+            ShowChatPanel(true);
 
             chat.UnreadCount = 0;
             UpdateChatsList();
@@ -1805,6 +1856,81 @@ namespace Messenger.Client
                     return nextMsg.SenderId != currentMsg.SenderId;
             }
             return true;
+        }
+
+        private void ShowChatPanel(bool showChat)
+        {
+            if (showChat && currentChat != null)
+            {
+                if (chatContainer != null) chatContainer.Visible = true;
+                if (welcomePanel != null) welcomePanel.Visible = false;
+            }
+            else
+            {
+                if (chatContainer != null) chatContainer.Visible = false;
+                if (welcomePanel != null) welcomePanel.Visible = true;
+                currentChat = null;
+                lblChatName.Text = "Выберите чат";
+                lstMessages.Items.Clear();
+                btnSend.Enabled = false;
+            }
+        }
+
+        private void HideCurrentChat(object sender, EventArgs e)
+        {
+            if (currentChat != null)
+            {
+                ShowChatPanel(false);
+                // Сбрасываем сохранённый ID последнего чата
+                ini.Write(INI_SECTION, KEY_LAST_CHAT, "0");
+            }
+        }
+
+        private void SaveLastChat()
+        {
+            if (currentChat != null && ini != null)
+                ini.Write(INI_SECTION, KEY_LAST_CHAT, currentChat.Id.ToString());
+        }
+
+        private int LoadLastChatId()
+        {
+            if (ini == null) return 0;
+            string val = ini.Read(INI_SECTION, KEY_LAST_CHAT, "0");
+            return int.TryParse(val, out int id) ? id : 0;
+        }
+
+        private void LeaveChatMenuItem_Click(object sender, EventArgs e)
+        {
+            // Получаем выделенный чат в списке (не тот, который открыт, а на который кликнули правой кнопкой)
+            if (lstChats.SelectedItem is Chat chat)
+            {
+                // Запрещаем выход из чата отдела для не-администраторов
+                if (chat.Type == ChatType.Department && !currentUser.IsAdmin)
+                {
+                    MessageBox.Show("Вы не можете покинуть чат отдела. Обратитесь к администратору.",
+                        "Действие запрещено", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                string confirmMessage = chat.Type == ChatType.Private
+                    ? "Вы уверены, что хотите удалить этот диалог? Он исчезнет из списка, но останется у собеседника."
+                    : "Вы уверены, что хотите покинуть чат? Вы больше не сможете писать в него, если вас не добавят снова.";
+
+                if (MessageBox.Show(confirmMessage, "Подтверждение",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                {
+                    // Отправляем команду на удаление себя из участников чата
+                    networkClient.SendPacket(new NetworkPacket
+                    {
+                        Command = Shared.CommandType.RemoveChatParticipant,
+                        Data = new { chatId = chat.Id, userId = currentUser.Id }
+                    });
+                }
+            }
+            else
+            {
+                MessageBox.Show("Выберите чат в списке.");
+            }
         }
     }
 }

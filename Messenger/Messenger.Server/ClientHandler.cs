@@ -389,34 +389,36 @@ namespace Messenger.Server
 
         private void HandleRemoveParticipant(NetworkPacket packet)
         {
-            if (User == null || !User.IsAdmin) return;
-
             var jsonElement = (JsonElement)packet.Data;
             string json = jsonElement.GetRawText();
             var data = JsonSerializer.Deserialize<Dictionary<string, int>>(json);
             int chatId = data["chatId"];
             int userId = data["userId"];
 
-            if (userId == User.Id)
+            // Проверка: пользователь может удалить только себя, либо администратор может удалить любого
+            if (userId != User.Id && !User.IsAdmin)
             {
-                server.Log($"Администратор {User.FullName} попытался удалить себя из чата {chatId}");
+                server.Log($"Пользователь {User.Id} попытался удалить участника {userId} из чата {chatId} без прав админа");
                 return;
             }
 
             var chat = db.GetChatById(chatId);
-            if (chat == null || (chat.Type != ChatType.Department && chat.Type != ChatType.Group)) return;
+            if (chat == null) return;
 
             db.RemoveUserFromChat(chatId, userId);
+
+            // Обновляем кеш участников (если используется)
             server.UpdateChatParticipantsCache(chatId);
 
             var updatedChat = db.GetChatById(chatId);
             updatedChat.Participants = db.GetChatParticipants(chatId);
             server.BroadcastToChat(chatId, new NetworkPacket { Command = CommandType.ChatUpdated, Data = updatedChat });
 
+            // Для удалённого пользователя отправляем обновлённый список чатов
             var userChats = db.GetUserChats(userId);
             server.BroadcastToUser(userId, new NetworkPacket { Command = CommandType.ChatsList, Data = userChats });
 
-            server.Log($"Администратор {User.FullName} удалил пользователя {userId} из чата {chatId}");
+            server.Log($"Пользователь {User.Id} удалил участника {userId} из чата {chatId}");
         }
 
         private void HandleGetChatInfo(NetworkPacket packet)
@@ -541,60 +543,58 @@ namespace Messenger.Server
                 string json = jsonElement.GetRawText();
                 var data = JsonSerializer.Deserialize<Dictionary<string, object>>(json);
 
-                // Десериализуем пользователя
                 var user = JsonSerializer.Deserialize<User>(data["user"].ToString());
 
-                // Старый DepartmentId (переданный клиентом)
-                int? oldDepartmentId = data.ContainsKey("oldDepartmentId") && data["oldDepartmentId"] != null
-                    ? Convert.ToInt32(data["oldDepartmentId"])
-                    : (int?)null;
-
-                // Новый пароль (может быть null, если не меняется)
-                string newPassword = data.ContainsKey("password") ? data["password"]?.ToString() : null;
-
-                // Обновляем основные данные пользователя в БД
-                db.UpdateUser(user, newPassword);
-
-                // Если отдел изменился – синхронизируем членство в чатах отделов
-                if (oldDepartmentId != user.DepartmentId)
+                int? oldDepartmentId = null;
+                if (data.ContainsKey("oldDepartmentId") && data["oldDepartmentId"] != null)
                 {
-                    db.UpdateUserDepartmentAndSyncChats(user.Id, user.DepartmentId);
-
-                    // Обновляем кеш для чата старого отдела (если чат существовал)
-                    if (oldDepartmentId.HasValue)
+                    try
                     {
-                        int? oldDeptChatId = db.GetDepartmentChatId(oldDepartmentId.Value);
-                        if (oldDeptChatId.HasValue)
-                            server.UpdateChatParticipantsCache(oldDeptChatId.Value);
+                        var element = (JsonElement)data["oldDepartmentId"];
+                        if (element.ValueKind != JsonValueKind.Null)
+                            oldDepartmentId = element.GetInt32();
                     }
-
-                    // Обновляем кеш для чата нового отдела (если чат существует)
-                    if (user.DepartmentId.HasValue)
+                    catch (Exception ex)
                     {
-                        int? newDeptChatId = db.GetDepartmentChatId(user.DepartmentId.Value);
-                        if (newDeptChatId.HasValue)
-                            server.UpdateChatParticipantsCache(newDeptChatId.Value);
+                        server.Log($"Ошибка получения oldDepartmentId: {ex.Message}");
                     }
                 }
 
-                // Отправляем обновлённый список всех пользователей администратору
-                var allUsers = db.GetAllUsers();
-                SendPacket(new NetworkPacket
+                string newPassword = null;
+                if (data.ContainsKey("password") && data["password"] != null)
                 {
-                    Command = CommandType.AllUsersList,
-                    Data = allUsers
-                });
+                    if (data["password"] is string str)
+                        newPassword = str;
+                    else if (data["password"] is JsonElement elem && elem.ValueKind == JsonValueKind.String)
+                        newPassword = elem.GetString();
+                }
 
-                server.Log($"Администратор {User.FullName} обновил пользователя {user.FullName} (Id={user.Id})");
+                db.UpdateUser(user, newPassword);
+
+                if (oldDepartmentId != user.DepartmentId)
+                {
+                    db.UpdateUserDepartmentAndSyncChats(user.Id, user.DepartmentId);
+                    if (oldDepartmentId.HasValue)
+                    {
+                        int? oldChatId = db.GetDepartmentChatId(oldDepartmentId.Value);
+                        if (oldChatId.HasValue)
+                            server.UpdateChatParticipantsCache(oldChatId.Value);
+                    }
+                    // Обновляем кеш для чата нового отдела
+                    if (user.DepartmentId.HasValue)
+                    {
+                        int? newChatId = db.GetDepartmentChatId(user.DepartmentId.Value);
+                        if (newChatId.HasValue)
+                            server.UpdateChatParticipantsCache(newChatId.Value);
+                    }
+                }
+
+                SendPacket(new NetworkPacket { Command = CommandType.AllUsersList, Data = db.GetAllUsers() });
             }
             catch (Exception ex)
             {
                 server.Log($"Ошибка в HandleUpdateUser: {ex.Message}");
-                SendPacket(new NetworkPacket
-                {
-                    Command = CommandType.Error,
-                    Data = "Ошибка при обновлении пользователя"
-                });
+                SendPacket(new NetworkPacket { Command = CommandType.Error, Data = "Ошибка при обновлении пользователя" });
             }
         }
 

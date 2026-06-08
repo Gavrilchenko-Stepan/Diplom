@@ -399,7 +399,8 @@ namespace Messenger.Server
                 string query = @"
                     SELECT u.id, u.username, u.full_name, u.department_id, u.position, u.is_admin, d.name as department_name, us.is_online, us.last_seen
                     FROM users u
-                    LEFT JOIN departments d ON u.department_id = d.id   -- исправлено
+                    JOIN chat_participants cp ON u.id = cp.user_id
+                    LEFT JOIN departments d ON u.department_id = d.id
                     LEFT JOIN user_status us ON u.id = us.user_id
                     WHERE cp.chat_id = @chatId";
                 using (var cmd = new SQLiteCommand(query, connection))
@@ -776,6 +777,19 @@ namespace Messenger.Server
                     cmd.Parameters.AddWithValue("@userId", userId);
                     cmd.ExecuteNonQuery();
                 }
+
+                // Проверяем, остались ли участники
+                string countSql = "SELECT COUNT(*) FROM chat_participants WHERE chat_id = @chatId";
+                using (var cmd = new SQLiteCommand(countSql, connection))
+                {
+                    cmd.Parameters.AddWithValue("@chatId", chatId);
+                    int cnt = Convert.ToInt32(cmd.ExecuteScalar());
+                    if (cnt == 0)
+                    {
+                        // Удаляем чат, если он пуст
+                        DeleteChat(chatId);
+                    }
+                }
             }
         }
 
@@ -787,7 +801,7 @@ namespace Messenger.Server
                 string query = @"
             SELECT u.id, u.username, u.full_name, u.department_id, u.position, u.is_admin, d.name as department_name, us.is_online, us.last_seen
             FROM users u
-            JOIN departments d ON u.department_id = d.id
+            LEFT JOIN departments d ON u.department_id = d.id
             LEFT JOIN user_status us ON u.id = us.user_id
             WHERE u.id NOT IN (SELECT user_id FROM chat_participants WHERE chat_id = @chatId)
             ORDER BY us.is_online DESC, u.full_name";
@@ -1120,20 +1134,31 @@ namespace Messenger.Server
         {
             lock (dbLock)
             {
-                // Удаляем чат отдела (каскадно удалит участников и сообщения)
+                // 1. Отвязать всех пользователей от этого отдела (установить department_id = NULL)
+                string updateUsers = "UPDATE users SET department_id = NULL WHERE department_id = @deptId";
+                using (var cmd = new SQLiteCommand(updateUsers, connection))
+                {
+                    cmd.Parameters.AddWithValue("@deptId", departmentId);
+                    cmd.ExecuteNonQuery();
+                }
+
+                // 2. Удалить чат отдела (если он есть). Благодаря ON DELETE CASCADE, участники и сообщения удалятся автоматически
                 string deleteChat = "DELETE FROM chats WHERE type = 'Department' AND department_id = @deptId";
                 using (var cmd = new SQLiteCommand(deleteChat, connection))
                 {
                     cmd.Parameters.AddWithValue("@deptId", departmentId);
                     cmd.ExecuteNonQuery();
                 }
-                // Удаляем отдел
+
+                // 3. Удалить сам отдел
                 string deleteDept = "DELETE FROM departments WHERE id = @id";
                 using (var cmd = new SQLiteCommand(deleteDept, connection))
                 {
                     cmd.Parameters.AddWithValue("@id", departmentId);
                     cmd.ExecuteNonQuery();
                 }
+
+                Console.WriteLine($"Отдел {departmentId} удалён, пользователи отвязаны.");
             }
         }
 
