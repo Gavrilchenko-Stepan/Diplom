@@ -66,6 +66,8 @@ namespace Messenger.Shared
         GetAllDepartments,
         AddDepartment,
         UpdateDepartment,
-        DeleteDepartment
+        DeleteDepartment,
+
+        CreateDepartmentChat
     }
 }

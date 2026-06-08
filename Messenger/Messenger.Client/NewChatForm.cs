@@ -94,18 +94,21 @@ namespace Messenger.Client
         {
             // Личное дерево
             tvPrivateUsers.Nodes.Clear();
-            var usersByDept = availableUsers.Where(u => u.Id != currentUserId)
-                                             .GroupBy(u => u.Department)
-                                             .OrderBy(g => g.Key);
-            foreach (var group in usersByDept)
+            var privateUsers = availableUsers.Where(u => u.Id != currentUserId).ToList();
+            var privateGroups = privateUsers
+                .GroupBy(u => u.Department ?? "Без отдела")
+                .OrderBy(g => g.Key == "Без отдела" ? 0 : 1)
+                .ThenBy(g => g.Key);
+
+            foreach (var group in privateGroups)
             {
                 TreeNode deptNode = new TreeNode(group.Key);
                 deptNode.ForeColor = Color.White;
                 foreach (var user in group.OrderBy(u => u.FullName))
                 {
-                    string display = string.IsNullOrEmpty(user.Position)
-                        ? user.FullName
-                        : $"{user.FullName} ({user.Position})";
+                    string display = user.FullName;
+                    if (!string.IsNullOrEmpty(user.Position))
+                        display += $" ({user.Position})";
                     TreeNode userNode = new TreeNode(display);
                     userNode.Tag = user;
                     userNode.ForeColor = Color.White;
@@ -115,20 +118,26 @@ namespace Messenger.Client
             }
             tvPrivateUsers.ExpandAll();
 
-            // Групповое дерево
+            // Групповое дерево (с чекбоксами)
             tvGroupUsers.Nodes.Clear();
-            foreach (var group in usersByDept)
+            var groupUsers = availableUsers.Where(u => u.Id != currentUserId).ToList();
+            var groupGroups = groupUsers
+                .GroupBy(u => u.Department ?? "Без отдела")
+                .OrderBy(g => g.Key);
+
+            foreach (var group in groupGroups)
             {
                 TreeNode deptNode = new TreeNode(group.Key);
                 deptNode.ForeColor = Color.White;
                 foreach (var user in group.OrderBy(u => u.FullName))
                 {
-                    string display = string.IsNullOrEmpty(user.Position)
-                        ? user.FullName
-                        : $"{user.FullName} ({user.Position})";
+                    string display = user.FullName;
+                    if (!string.IsNullOrEmpty(user.Position))
+                        display += $" ({user.Position})";
                     TreeNode userNode = new TreeNode(display);
                     userNode.Tag = user;
                     userNode.ForeColor = Color.White;
+                    userNode.Checked = false; // для группового чата
                     deptNode.Nodes.Add(userNode);
                 }
                 tvGroupUsers.Nodes.Add(deptNode);

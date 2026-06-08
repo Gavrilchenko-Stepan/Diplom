@@ -13,7 +13,7 @@ namespace Messenger.Shared
         public string Username { get; set; }
         public string Password { get; set; }
         public string FullName { get; set; }
-        public int DepartmentId { get; set; }
+        public int? DepartmentId { get; set; }
         public string Department { get; set; }
         public string Position { get; set; }
         public bool IsOnline { get; set; }

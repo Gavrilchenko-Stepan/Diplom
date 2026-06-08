@@ -47,10 +47,31 @@ namespace Messenger.Client
 
         private void LoadDepartments()
         {
-            cmbDepartment.DataSource = departments;
+            var deptList = new List<dynamic>();  // можно использовать анонимный тип или List<object>
+            deptList.Add(new { Id = (int?)null, Name = "Без отдела" });
+            foreach (var d in departments)
+            {
+                deptList.Add(new { Id = (int?)d.Id, Name = d.Name });
+            }
+
+            cmbDepartment.DataSource = deptList;
             cmbDepartment.DisplayMember = "Name";
             cmbDepartment.ValueMember = "Id";
             cmbDepartment.SelectedIndex = -1;
+
+            // Если редактируем существующего пользователя, нужно установить выбранное значение
+            if (!isNewUser && editingUser.DepartmentId.HasValue)
+            {
+                // Ищем среди элементов тот, у которого Id равен editingUser.DepartmentId
+                var selected = deptList.FirstOrDefault(x => x.Id == editingUser.DepartmentId);
+                if (selected != null)
+                    cmbDepartment.SelectedItem = selected;
+            }
+            else if (!isNewUser && !editingUser.DepartmentId.HasValue)
+            {
+                // Если у пользователя отдел не задан (null), выбираем "Без отдела"
+                cmbDepartment.SelectedItem = deptList[0];
+            }
         }
 
         private void BtnSave_Click(object sender, EventArgs e)
@@ -82,7 +103,7 @@ namespace Messenger.Client
                 Id = editingUser?.Id ?? 0,
                 Username = txtUsername.Text.Trim(),
                 FullName = txtFullName.Text.Trim(),
-                DepartmentId = (int)cmbDepartment.SelectedValue,
+                DepartmentId = cmbDepartment.SelectedValue as int?,
                 Position = txtPosition.Text.Trim(),
                 IsAdmin = chkIsAdmin.Checked
             };

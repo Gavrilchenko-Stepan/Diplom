@@ -100,15 +100,10 @@ namespace Messenger.Client
             lstParticipants.Items.Clear();
             if (participants != null)
             {
+                lstParticipants.DisplayMember = "FullName";
                 foreach (var user in participants.OrderBy(u => u.FullName))
                 {
-                    string display = string.IsNullOrEmpty(user.Position)
-                        ? user.FullName
-                        : $"{user.FullName} ({user.Position})";
-                    lstParticipants.Items.Add(display);
-                    // можно хранить объект через Tag, но ListBox неудобен; оставим пока как строки
-                    // для удаления потом будем искать по имени, но это не очень надёжно. Лучше хранить объект.
-                    // Временно так; позже можно добавить свойство для хранения User.
+                    lstParticipants.Items.Add(user);
                 }
             }
         }
@@ -121,8 +116,8 @@ namespace Messenger.Client
             // Исключаем уже состоящих в чате
             var available = allUsers.Where(u => !participants.Any(p => p.Id == u.Id)).ToList();
 
-            // Группируем по отделам
-            var usersByDept = available.GroupBy(u => u.Department).OrderBy(g => g.Key);
+            // Группировка с заменой null на "Без отдела"
+            var usersByDept = available.GroupBy(u => u.Department ?? "Без отдела").OrderBy(g => g.Key);
 
             foreach (var group in usersByDept)
             {
@@ -134,7 +129,7 @@ namespace Messenger.Client
                         ? user.FullName
                         : $"{user.FullName} ({user.Position})";
                     TreeNode userNode = new TreeNode(display);
-                    userNode.Tag = user; // сохраняем объект User
+                    userNode.Tag = user;
                     userNode.ForeColor = Color.White;
                     deptNode.Nodes.Add(userNode);
                 }
@@ -161,30 +156,22 @@ namespace Messenger.Client
 
         private void BtnRemove_Click(object sender, EventArgs e)
         {
-            if (lstParticipants.SelectedItem != null)
+            if (lstParticipants.SelectedItem is User user)
             {
-                // Пока удаляем по имени – это временное решение, пока не храним объекты.
-                // Лучше хранить в lstParticipants объекты User, используя свойство DisplayMember.
-                // Для простоты оставим так, но потом можно доработать.
-                string selectedName = lstParticipants.SelectedItem.ToString();
-                var user = participants.FirstOrDefault(u => u.FullName == selectedName);
-                if (user != null)
+                if (user.Id == currentUserId)
                 {
-                    if (user.Id == currentUserId)
-                    {
-                        MessageBox.Show("Нельзя удалить себя из чата.");
-                        return;
-                    }
-                    networkClient.SendPacket(new NetworkPacket
-                    {
-                        Command = Shared.CommandType.RemoveChatParticipant,
-                        Data = new { chatId, userId = user.Id }
-                    });
+                    MessageBox.Show("Нельзя удалить себя из чата.", "Внимание", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
                 }
+                networkClient.SendPacket(new NetworkPacket
+                {
+                    Command = Shared.CommandType.RemoveChatParticipant,
+                    Data = new { chatId, userId = user.Id }
+                });
             }
             else
             {
-                MessageBox.Show("Выберите пользователя для удаления.");
+                MessageBox.Show("Выберите пользователя для удаления.", "Внимание", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 

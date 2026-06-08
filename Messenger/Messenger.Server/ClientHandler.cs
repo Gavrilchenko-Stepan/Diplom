@@ -143,6 +143,9 @@ namespace Messenger.Server
                     case CommandType.DeleteDepartment:
                         HandleDeleteDepartment(packet);
                         break;
+                    case CommandType.CreateDepartmentChat:
+                        HandleCreateDepartmentChat(packet);
+                        break;
                 }
             }
             catch (Exception ex)
@@ -529,8 +532,19 @@ namespace Messenger.Server
             string json = jsonElement.GetRawText();
             var data = JsonSerializer.Deserialize<Dictionary<string, object>>(json);
             var user = JsonSerializer.Deserialize<User>(data["user"].ToString());
+            int? oldDepartmentId = data.ContainsKey("oldDepartmentId") ? (int?)Convert.ToInt32(data["oldDepartmentId"]) : null;
             string newPassword = data.ContainsKey("password") ? data["password"]?.ToString() : null;
+
+            // Обновляем основные данные пользователя
             db.UpdateUser(user, newPassword);
+
+            // Если отдел изменился – синхронизируем членство в чатах отделов
+            if (oldDepartmentId != user.DepartmentId)
+            {
+                db.UpdateUserDepartmentAndSyncChats(user.Id, user.DepartmentId);
+            }
+
+            // Отправляем обновлённый список пользователей
             SendPacket(new NetworkPacket { Command = CommandType.AllUsersList, Data = db.GetAllUsers() });
         }
 
@@ -680,6 +694,24 @@ namespace Messenger.Server
             db.DeleteDepartment(deptId);
             SendPacket(new NetworkPacket { Command = CommandType.DepartmentsList, Data = db.GetAllDepartments() });
             server.Log($"Администратор {User.FullName} удалил отдел {deptId}");
+        }
+
+        private void HandleCreateDepartmentChat(NetworkPacket packet)
+        {
+            if (User == null || !User.IsAdmin) return;
+            int departmentId = ((JsonElement)packet.Data).GetInt32();
+            var chat = db.CreateDepartmentChat(departmentId);
+            if (chat != null)
+            {
+                SendPacket(new NetworkPacket { Command = CommandType.ChatCreated, Data = chat });
+                // Оповестить всех пользователей отдела (у них появится новый чат)
+                var users = db.GetUsersByDepartment(departmentId); // нужно добавить этот метод в DB
+                foreach (var u in users)
+                {
+                    var userChats = db.GetUserChats(u.Id);
+                    server.BroadcastToUser(u.Id, new NetworkPacket { Command = CommandType.ChatsList, Data = userChats });
+                }
+            }
         }
     }
 }

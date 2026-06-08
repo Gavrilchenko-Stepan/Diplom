@@ -56,6 +56,8 @@ namespace Messenger.Client
         private Button btnDeleteDepartment;
         private Button btnRefreshDepartments;
         private Label lblTitleDepartments;
+        private Button btnCreateDeptChat;
+        private Button btnDeleteDeptChat;
 
         protected override void Dispose(bool disposing)
         {
@@ -569,6 +571,8 @@ namespace Messenger.Client
             this.panelDepartmentsMain.Controls.Add(this.btnEditDepartment);
             this.panelDepartmentsMain.Controls.Add(this.btnDeleteDepartment);
             this.panelDepartmentsMain.Controls.Add(this.btnRefreshDepartments);
+            this.panelDepartmentsMain.Controls.Add(this.btnCreateDeptChat);
+            this.panelDepartmentsMain.Controls.Add(this.btnDeleteDeptChat);
             this.panelDepartmentsMain.Dock = System.Windows.Forms.DockStyle.Fill;
             this.panelDepartmentsMain.Location = new System.Drawing.Point(0, 0);
             this.panelDepartmentsMain.Name = "panelDepartmentsMain";
@@ -656,6 +660,36 @@ namespace Messenger.Client
             this.btnRefreshDepartments.TabIndex = 5;
             this.btnRefreshDepartments.Text = "🔄 Обновить";
             this.btnRefreshDepartments.UseVisualStyleBackColor = false;
+            //
+            // btnCreateDeptChat
+            //
+            this.btnCreateDeptChat = new System.Windows.Forms.Button();
+            this.btnCreateDeptChat.BackColor = System.Drawing.Color.Transparent;
+            this.btnCreateDeptChat.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
+            this.btnCreateDeptChat.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnCreateDeptChat.Font = new System.Drawing.Font("Segoe UI", 10F);
+            this.btnCreateDeptChat.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
+            this.btnCreateDeptChat.Location = new System.Drawing.Point(600, 230);
+            this.btnCreateDeptChat.Name = "btnCreateDeptChat";
+            this.btnCreateDeptChat.Size = new System.Drawing.Size(160, 40);
+            this.btnCreateDeptChat.TabIndex = 7;
+            this.btnCreateDeptChat.Text = "🏢 Создать чат отдела";
+            this.btnCreateDeptChat.UseVisualStyleBackColor = false;
+            //
+            // btnDeleteDeptChat
+            //
+            this.btnDeleteDeptChat = new System.Windows.Forms.Button();
+            this.btnDeleteDeptChat.BackColor = System.Drawing.Color.Transparent;
+            this.btnDeleteDeptChat.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(80)))), ((int)(((byte)(80)))));
+            this.btnDeleteDeptChat.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.btnDeleteDeptChat.Font = new System.Drawing.Font("Segoe UI", 10F);
+            this.btnDeleteDeptChat.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(80)))), ((int)(((byte)(80)))));
+            this.btnDeleteDeptChat.Location = new System.Drawing.Point(600, 280);
+            this.btnDeleteDeptChat.Name = "btnDeleteDeptChat";
+            this.btnDeleteDeptChat.Size = new System.Drawing.Size(160, 40);
+            this.btnDeleteDeptChat.TabIndex = 8;
+            this.btnDeleteDeptChat.Text = "🗑 Удалить чат отдела";
+            this.btnDeleteDeptChat.UseVisualStyleBackColor = false;
             // 
             // AdminDashboardForm
             // 

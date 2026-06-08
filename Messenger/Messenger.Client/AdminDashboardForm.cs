@@ -89,6 +89,9 @@ namespace Messenger.Client
             btnDeleteDepartment.Click += BtnDeleteDepartment_Click;
             btnRefreshDepartments.Click += BtnRefreshDepartments_Click;
 
+            btnCreateDeptChat.Click += BtnCreateDeptChat_Click;
+            btnDeleteDeptChat.Click += BtnDeleteDeptChat_Click;
+
             this.lstHistoryMessages.DrawMode = DrawMode.OwnerDrawVariable;
             this.lstHistoryMessages.MeasureItem += new MeasureItemEventHandler(this.LstHistory_MeasureItem);
             this.lstHistoryMessages.DrawItem += new DrawItemEventHandler(this.LstHistory_DrawItem);
@@ -205,21 +208,46 @@ namespace Messenger.Client
             dgvDepartments.DataSource = null;
             dgvDepartments.DataSource = departments;
 
-            // Меняем заголовки на русские
+            // Настройка заголовков
             if (dgvDepartments.Columns["Name"] != null)
                 dgvDepartments.Columns["Name"].HeaderText = "Название отдела";
             if (dgvDepartments.Columns.Contains("Description"))
                 dgvDepartments.Columns["Description"].HeaderText = "Описание";
-            // При желании скрыть столбец Id:
             if (dgvDepartments.Columns["Id"] != null)
                 dgvDepartments.Columns["Id"].Visible = false;
+
+            // Добавляем колонку "Чат создан", если её нет
+            if (!dgvDepartments.Columns.Contains("HasChat"))
+            {
+                DataGridViewCheckBoxColumn col = new DataGridViewCheckBoxColumn
+                {
+                    Name = "HasChat",
+                    HeaderText = "Чат создан",
+                    ReadOnly = true,
+                    Width = 80
+                };
+                dgvDepartments.Columns.Add(col);
+            }
+
+            // Заполняем колонку HasChat на основе свойства ChatId
+            foreach (DataGridViewRow row in dgvDepartments.Rows)
+            {
+                var dept = row.DataBoundItem as Department;
+                if (dept != null)
+                {
+                    row.Cells["HasChat"].Value = dept.ChatId.HasValue;
+                }
+            }
+
+            // Настраиваем внешний вид таблицы
+            dgvDepartments.ClearSelection();
         }
 
         // ================== Управление пользователями ==================
         private void UpdateTree(List<User> users)
         {
             tvUsers.Nodes.Clear();
-            var usersByDept = users.GroupBy(u => u.Department).OrderBy(g => g.Key);
+            var usersByDept = users.GroupBy(u => u.Department ?? "Без отдела").OrderBy(g => g.Key);
             foreach (var group in usersByDept)
             {
                 TreeNode deptNode = new TreeNode(group.Key);
@@ -855,6 +883,70 @@ namespace Messenger.Client
         private void BtnRefreshDepartments_Click(object sender, EventArgs e)
         {
             networkClient.SendPacket(new NetworkPacket { Command = CommandType.GetAllDepartments });
+        }
+
+        private void BtnCreateDeptChat_Click(object sender, EventArgs e)
+        {
+            // Проверяем, выбран ли отдел
+            if (dgvDepartments.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Выберите отдел.", "Внимание", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var dept = (Department)dgvDepartments.SelectedRows[0].DataBoundItem;
+
+            // Проверяем, не создан ли уже чат
+            if (dept.ChatId.HasValue)
+            {
+                MessageBox.Show($"Для отдела \"{dept.Name}\" чат уже создан.", "Информация",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            // Запрашиваем подтверждение
+            if (MessageBox.Show($"Создать чат для отдела \"{dept.Name}\"?", "Подтверждение",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                return;
+
+            // Отправляем команду на сервер
+            networkClient.SendPacket(new NetworkPacket
+            {
+                Command = CommandType.CreateDepartmentChat,
+                Data = dept.Id
+            });
+        }
+
+        private void BtnDeleteDeptChat_Click(object sender, EventArgs e)
+        {
+            // Проверяем, выбран ли отдел
+            if (dgvDepartments.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Выберите отдел.", "Внимание", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var dept = (Department)dgvDepartments.SelectedRows[0].DataBoundItem;
+
+            // Проверяем, существует ли чат для удаления
+            if (!dept.ChatId.HasValue)
+            {
+                MessageBox.Show($"У отдела \"{dept.Name}\" нет чата.", "Информация",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            // Запрашиваем подтверждение (предупреждаем о необратимости)
+            if (MessageBox.Show($"Удалить чат отдела \"{dept.Name}\"?\nВсе сообщения чата будут удалены без возможности восстановления.",
+                    "Подтверждение", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+                return;
+
+            // Отправляем команду на удаление чата (используем существующую команду DeleteChat)
+            networkClient.SendPacket(new NetworkPacket
+            {
+                Command = CommandType.DeleteChat,
+                Data = dept.ChatId.Value   // передаём ID чата
+            });
         }
     }
 }
