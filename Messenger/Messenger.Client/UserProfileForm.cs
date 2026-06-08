@@ -20,7 +20,7 @@ namespace Messenger.Client
         public UserProfileForm(User user, NetworkClient client)
         {
             InitializeComponent();
-            this.Load += (s, e) => SetRoundedRegion(this, 20);
+            UIHelper.SetRoundedRegion(this, 20);
             currentUser = user;
             networkClient = client;
             networkClient.OnPacketReceived += OnPacketReceived;
@@ -76,13 +76,17 @@ namespace Messenger.Client
                 return;
             }
 
-            btnSave.Enabled = false;
-            var data = new { oldPassword = oldPass, newPassword = newPass };
+            string hashedOld = SecurityHelper.HashPassword(oldPass);
+            string hashedNew = SecurityHelper.HashPassword(newPass);
+
+            var data = new { oldPassword = hashedOld, newPassword = hashedNew };
             networkClient.SendPacket(new NetworkPacket
             {
                 Command = Shared.CommandType.ChangePassword,
                 Data = data
             });
+
+            btnSave.Enabled = false;
         }
 
         private void BtnCancel_Click(object sender, EventArgs e)
@@ -95,19 +99,6 @@ namespace Messenger.Client
         {
             networkClient.OnPacketReceived -= OnPacketReceived;
             base.OnFormClosing(e);
-        }
-
-        private void SetRoundedRegion(Control ctrl, int radius)
-        {
-            using (var path = new System.Drawing.Drawing2D.GraphicsPath())
-            {
-                path.AddArc(0, 0, radius, radius, 180, 90);
-                path.AddArc(ctrl.Width - radius, 0, radius, radius, 270, 90);
-                path.AddArc(ctrl.Width - radius, ctrl.Height - radius, radius, radius, 0, 90);
-                path.AddArc(0, ctrl.Height - radius, radius, radius, 90, 90);
-                path.CloseFigure();
-                ctrl.Region = new Region(path);
-            }
         }
     }
 }

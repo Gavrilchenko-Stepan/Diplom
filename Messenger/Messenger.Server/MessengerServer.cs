@@ -18,6 +18,8 @@ namespace Messenger.Server
         private DatabaseManager db;
         private bool isRunning = false;
         private readonly object clientsLock = new object();
+        private Dictionary<int, HashSet<int>> chatParticipantsCache = new Dictionary<int, HashSet<int>>();
+        private readonly object cacheLock = new object();
 
         public MessengerServer(string dbPath)
         {
@@ -29,6 +31,11 @@ namespace Messenger.Server
             try
             {
                 db.InitializeDatabase();
+                var allChats = db.GetAllChats();
+                foreach (var chat in allChats)
+                {
+                    UpdateChatParticipantsCache(chat.Id);
+                }
                 db.CreateDepartmentChatsForAllDepartments();
 
                 int port = 8888;
@@ -66,16 +73,22 @@ namespace Messenger.Server
                 try
                 {
                     var tcpClient = tcpListener.AcceptTcpClient();
+                    string clientIp = ((IPEndPoint)tcpClient.Client.RemoteEndPoint).Address.ToString();
+                    Log($"Новый клиент подключен: {clientIp}. Всего: {clients.Count + 1}");
                     var clientHandler = new ClientHandler(tcpClient, this, db);
-
                     lock (clientsLock)
                         clients.Add(clientHandler);
-
                     var clientThread = new Thread(clientHandler.HandleClient);
                     clientThread.IsBackground = true;
                     clientThread.Start();
-
                     Log($"Новый клиент подключен. Всего: {clients.Count}");
+                }
+                catch (SocketException ex)
+                {
+                    if (isRunning)
+                        Log($"Ошибка принятия клиента: {ex.Message}");
+                    // При остановке сервера исключение ожидаемо, выходим
+                    if (!isRunning) break;
                 }
                 catch (Exception ex)
                 {
@@ -87,12 +100,16 @@ namespace Messenger.Server
 
         public void BroadcastToChat(int chatId, NetworkPacket packet, int excludeUserId = -1)
         {
+            List<ClientHandler> clientsCopy;
             lock (clientsLock)
             {
-                foreach (var client in clients)
+                clientsCopy = clients.ToList();
+            }
+            foreach (var client in clientsCopy)
+            {
+                if (client.User != null && client.User.Id != excludeUserId && UserHasAccessToChatCached(client.User.Id, chatId))
                 {
-                    if (client.User != null && client.User.Id != excludeUserId && db.UserHasAccessToChat(client.User.Id, chatId))
-                        client.SendPacket(packet);
+                    client.SendPacket(packet);
                 }
             }
         }
@@ -135,6 +152,7 @@ namespace Messenger.Server
         public void Stop()
         {
             isRunning = false;
+            tcpListener?.Stop();
             lock (clientsLock)
             {
                 foreach (var client in clients)
@@ -144,6 +162,26 @@ namespace Messenger.Server
             tcpListener?.Stop();
             db.Close();
             Log("Сервер остановлен");
+        }
+
+        public void UpdateChatParticipantsCache(int chatId)
+        {
+            lock (cacheLock)
+            {
+                var participants = db.GetChatParticipants(chatId).Select(u => u.Id).ToHashSet();
+                chatParticipantsCache[chatId] = participants;
+            }
+        }
+
+        private bool UserHasAccessToChatCached(int userId, int chatId)
+        {
+            lock (cacheLock)
+            {
+                if (chatParticipantsCache.TryGetValue(chatId, out var participants))
+                    return participants.Contains(userId);
+            }
+            // fallback – запрос в БД
+            return db.UserHasAccessToChat(userId, chatId);
         }
     }
 }

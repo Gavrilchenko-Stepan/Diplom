@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
@@ -57,7 +58,7 @@ namespace Messenger.Client
 
             this.Resize += (sender, e) =>
             {
-                Console.WriteLine($"panelTop.Width = {panelTop.Width}, ClientSize.Width = {this.ClientSize.Width}");
+                Debug.WriteLine($"panelTop.Width = {panelTop.Width}, ClientSize.Width = {this.ClientSize.Width}");
                 UpdateButtonsPosition();
             };
 
@@ -66,7 +67,7 @@ namespace Messenger.Client
             picOnlineIndicator.BringToFront();
 
             // Скругление углов верхней панели
-            SetRoundedRegion(panelTop, 20);
+            UIHelper.SetRoundedRegion(this, 20);
 
             /// Скругление аватарки чата
             picChatAvatar.SizeMode = PictureBoxSizeMode.StretchImage;
@@ -201,7 +202,7 @@ namespace Messenger.Client
                 // Чтобы радиус не превышал половину меньшей стороны окна
                 int maxRadius = Math.Min(this.ClientSize.Width, this.ClientSize.Height) / 2;
                 if (radius > maxRadius) radius = maxRadius;
-                SetRoundedRegion(this, radius);
+                UIHelper.SetRoundedRegion(this, 20);
             }
         }
 
@@ -277,18 +278,33 @@ namespace Messenger.Client
         {
             if (e.CloseReason == CloseReason.UserClosing)
             {
-                if (MessageBox.Show("Выйти из приложения?", "Подтверждение", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.No)
+                if (MessageBox.Show("Выйти из приложения?", "Подтверждение", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                {
+                    refreshTimer?.Stop();
+                    networkClient?.Disconnect();
+                }
+                else
                 {
                     e.Cancel = true;
-                    return;
                 }
             }
-            refreshTimer?.Stop();
-            networkClient?.Disconnect();
+            else
+            {
+                refreshTimer?.Stop();
+                networkClient?.Disconnect();
+            }
         }
 
         private void ShowLoginForm()
         {
+            // Отключаем старый клиент, если он существует
+            if (networkClient != null)
+            {
+                networkClient.OnPacketReceived -= OnPacketReceived;
+                networkClient.OnDisconnected -= OnDisconnected;
+                networkClient.Disconnect();
+            }
+
             using (var loginForm = new LoginForm())
             {
                 var result = loginForm.ShowDialog();
@@ -372,6 +388,8 @@ namespace Messenger.Client
         {
             if (networkClient?.IsConnected == true)
                 networkClient.SendPacket(new NetworkPacket { Command = Shared.CommandType.GetChats, UserId = currentUser.Id });
+            else
+                Console.WriteLine("LoadChats: клиент не подключён");
         }
 
         private void OnPacketReceived(NetworkPacket packet)
@@ -415,23 +433,46 @@ namespace Messenger.Client
                             lstMessages.Items.Clear();
                             btnSend.Enabled = false;
                         }
+
+                        if (currentChat != null)
+                        {
+                            var refreshedChat = chats.FirstOrDefault(c => c.Id == currentChat.Id);
+                            if (refreshedChat != null)
+                            {
+                                currentChat = refreshedChat;
+                                UpdateCurrentChatHeader();
+                            }
+                        }
                         break;
 
                     case Shared.CommandType.MessagesList:
                         var jsonElemMsgs = (JsonElement)packet.Data;
                         string jsonMsgs = jsonElemMsgs.GetRawText();
-                        var msgs = JsonSerializer.Deserialize<List<Shared.Message>>(jsonMsgs);
+                        List<Shared.Message> msgs = null;
+                        try
+                        {
+                            msgs = JsonSerializer.Deserialize<List<Shared.Message>>(jsonMsgs);
+                        }
+                        catch (JsonException ex)
+                        {
+                            Console.WriteLine($"Ошибка десериализации списка сообщений: {ex.Message}");
+                            return;
+                        }
                         if (msgs.Any())
                         {
                             int chatId = msgs.First().ChatId;
-                            Console.WriteLine($"Получен список сообщений для чата {chatId}, всего {msgs.Count}");
+                            Debug.WriteLine($"Получен список сообщений для чата {chatId}, всего {msgs.Count}");
                             messages[chatId] = msgs;
                             if (currentChat != null && chatId == currentChat.Id)
                                 DisplayMessages();
                         }
                         else
                         {
-                            Console.WriteLine("Получен пустой список сообщений");
+                            if (currentChat != null)
+                            {
+                                messages[currentChat.Id] = new List<Shared.Message>();
+                                DisplayMessages();
+                            }
                         }
                         break;
 
@@ -439,7 +480,7 @@ namespace Messenger.Client
                         var jsonElemNewMsg = (JsonElement)packet.Data;
                         string jsonNewMsg = jsonElemNewMsg.GetRawText();
                         var newMsg = JsonSerializer.Deserialize<Shared.Message>(jsonNewMsg);
-                        Console.WriteLine($"Получено новое сообщение: '{newMsg.Text}' в чат {newMsg.ChatId}");
+                        Debug.WriteLine($"Получено новое сообщение: '{newMsg.Text}' в чат {newMsg.ChatId}");
                         HandleNewMessage(newMsg);
                         break;
 
@@ -447,7 +488,7 @@ namespace Messenger.Client
                         var jsonElemUser = (JsonElement)packet.Data;
                         string jsonUser = jsonElemUser.GetRawText();
                         var user = JsonSerializer.Deserialize<User>(jsonUser);
-                        Console.WriteLine($"UserStatusChanged: {user.FullName} is {user.IsOnline}");
+                        Debug.WriteLine($"UserStatusChanged: {user.FullName} is {user.IsOnline}");
 
                         // Если изменился статус текущего пользователя
                         if (user.Id == currentUser.Id)
@@ -512,14 +553,30 @@ namespace Messenger.Client
                         Invoke(new Action(() => HandleMessageEdited(editedMsg)));
                         break;
                     case Shared.CommandType.TypingStatus:
-                        var typingData = ((JsonElement)packet.Data).Deserialize<Dictionary<string, object>>();
-                        int chatIdTyping = Convert.ToInt32(typingData["chatId"]);
-                        int userIdTyping = Convert.ToInt32(typingData["userId"]);
-                        bool isTyp = Convert.ToBoolean(typingData["isTyping"]);
-                        if (currentChat?.Id == chatIdTyping && userIdTyping != currentUser.Id)
+                        if (packet.Data is JsonElement jsonTyping && jsonTyping.ValueKind == JsonValueKind.Object)
                         {
-                            if (isTyp) ShowTypingIndicator(userIdTyping);
-                            else HideTypingIndicator();
+                            try
+                            {
+                                var typingData = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonTyping.GetRawText());
+                                if (typingData != null &&
+                                    typingData.TryGetValue("chatId", out var chatIdObj) &&
+                                    typingData.TryGetValue("userId", out var userIdObj) &&
+                                    typingData.TryGetValue("isTyping", out var isTypingObj))
+                                {
+                                    int chatId = Convert.ToInt32(chatIdObj);
+                                    int userId = Convert.ToInt32(userIdObj);
+                                    bool isTyp = Convert.ToBoolean(isTypingObj);
+                                    if (currentChat?.Id == chatId && userId != currentUser.Id)
+                                    {
+                                        if (isTyp) ShowTypingIndicator(userId);
+                                        else HideTypingIndicator();
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Debug.WriteLine($"Ошибка обработки TypingStatus: {ex.Message}");
+                            }
                         }
                         break;
                 }
@@ -750,14 +807,14 @@ namespace Messenger.Client
 
         private void UpdateUserStatus(User user)
         {
-            Console.WriteLine($"UpdateUserStatus: получили статус для {user.FullName} (Id={user.Id}) - онлайн={user.IsOnline}");
+            Debug.WriteLine($"UpdateUserStatus: получили статус для {user.FullName} (Id={user.Id}) - онлайн={user.IsOnline}");
             bool updated = false;
             foreach (var chat in chats)
             {
                 var p = chat.Participants?.FirstOrDefault(x => x.Id == user.Id);
                 if (p != null)
                 {
-                    Console.WriteLine($"  найден в чате {chat.Name}, старый статус {p.IsOnline}, новый {user.IsOnline}");
+                    Debug.WriteLine($"  найден в чате {chat.Name}, старый статус {p.IsOnline}, новый {user.IsOnline}");
                     p.IsOnline = user.IsOnline;
                     p.LastSeen = user.LastSeen;
                     updated = true;
@@ -765,12 +822,12 @@ namespace Messenger.Client
             }
             if (updated)
             {
-                Console.WriteLine("  Обновляем список чатов...");
+                Debug.WriteLine("  Обновляем список чатов...");
                 UpdateChatsList();
             }
             else
             {
-                Console.WriteLine("  Участник не найден ни в одном чате");
+                Debug.WriteLine("  Участник не найден ни в одном чате");
             }
 
             // Обновляем заголовок текущего чата, если он личный и статус изменился именно у собеседника
@@ -1188,7 +1245,7 @@ namespace Messenger.Client
         {
             if (currentChat?.Type == ChatType.Department || currentChat?.Type == ChatType.Group)
             {
-                using (var form = new ManageParticipantsForm(currentChat.Id, currentUser.Id, networkClient))
+                using (var form = new ManageParticipantsForm(currentChat.Id, currentUser.Id, networkClient, currentUser.IsAdmin))
                 {
                     form.ShowDialog();
                 }
@@ -1642,18 +1699,6 @@ namespace Messenger.Client
             {
                 e.Graphics.FillRectangle(brush, rect);
             }
-        }
-
-        // Создание скруглённой области для контрола
-        private void SetRoundedRegion(Control ctrl, int radius)
-        {
-            GraphicsPath path = new GraphicsPath();
-            path.AddArc(0, 0, radius, radius, 180, 90);
-            path.AddArc(ctrl.Width - radius, 0, radius, radius, 270, 90);
-            path.AddArc(ctrl.Width - radius, ctrl.Height - radius, radius, radius, 0, 90);
-            path.AddArc(0, ctrl.Height - radius, radius, radius, 90, 90);
-            path.CloseFigure();
-            ctrl.Region = new Region(path);
         }
 
         // Отрисовка аватара (круг, белая обводка, тень)

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
@@ -23,7 +24,7 @@ namespace Messenger.Client
         public NewChatForm(int userId, string department, NetworkClient client, bool isAdmin)
         {
             InitializeComponent();
-            this.Load += (s, e) => SetRoundedRegion(this, 20); // скругление углов
+            UIHelper.SetRoundedRegion(this, 20);
             currentUserId = userId;
             currentDepartment = department;
             networkClient = client;
@@ -39,20 +40,6 @@ namespace Messenger.Client
             tabControl.SelectedIndexChanged += TabControl_SelectedIndexChanged;
         }
 
-        // Скругление углов формы (единый стиль)
-        private void SetRoundedRegion(Control ctrl, int radius)
-        {
-            using (var path = new GraphicsPath())
-            {
-                path.AddArc(0, 0, radius, radius, 180, 90);
-                path.AddArc(ctrl.Width - radius, 0, radius, radius, 270, 90);
-                path.AddArc(ctrl.Width - radius, ctrl.Height - radius, radius, radius, 0, 90);
-                path.AddArc(0, ctrl.Height - radius, radius, radius, 90, 90);
-                path.CloseFigure();
-                ctrl.Region = new Region(path);
-            }
-        }
-
         private void NewChatForm_Load(object sender, EventArgs e)
         {
             networkClient.SendPacket(new NetworkPacket { Command = Shared.CommandType.GetAvailableUsers, Data = currentUserId });
@@ -66,7 +53,7 @@ namespace Messenger.Client
                 return;
             }
 
-            Console.WriteLine($"NewChatForm получил: {packet.Command}");
+            Debug.WriteLine($"NewChatForm получил: {packet.Command}");
 
             try
             {

@@ -58,6 +58,17 @@ namespace Messenger.Client
             {
                 components.Dispose();
             }
+            messageSenderFont?.Dispose();
+            messageTextFont?.Dispose();
+            messageTimeFont?.Dispose();
+            dateFont?.Dispose();
+            boldFont11?.Dispose();
+            normalFont9?.Dispose();
+            smallFont8?.Dispose();
+            iconFont?.Dispose();
+            typingTimer?.Dispose();
+            clearTypingTimer?.Dispose();
+            refreshTimer?.Dispose();
             base.Dispose(disposing);
         }
 

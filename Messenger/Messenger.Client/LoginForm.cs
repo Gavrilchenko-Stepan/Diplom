@@ -28,7 +28,7 @@ namespace Messenger.Client
             InitializeComponent();
             ApplyFuturisticStyle();
 
-            this.Load += (s, e) => SetRoundedRegion(this, 20);
+            UIHelper.SetRoundedRegion(this, 20);
 
             // --- Хранение в AppData ---
             string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
@@ -101,6 +101,18 @@ namespace Messenger.Client
             lblStatus.Visible = true;
             lblError.Visible = false;
 
+            var connectTask = networkClient.Connect(txtServerIP.Text);
+            var timeoutTask = Task.Delay(5000);
+            var completedTask = await Task.WhenAny(connectTask, timeoutTask);
+
+            if (completedTask == timeoutTask)
+            {
+                ShowError("Превышен таймаут подключения к серверу");
+                networkClient.Disconnect();
+                btnLogin.Enabled = true;
+                return;
+            }
+
             bool connected = await networkClient.Connect(txtServerIP.Text);
             if (!connected)
             {
@@ -114,6 +126,14 @@ namespace Messenger.Client
             {
                 Command = Shared.CommandType.Login,
                 Data = new { username = txtUsername.Text, password = txtPassword.Text }
+            });
+
+            string hashedPassword = SecurityHelper.HashPassword(txtPassword.Text);
+
+            networkClient.SendPacket(new NetworkPacket
+            {
+                Command = Shared.CommandType.Login,
+                Data = new { username = txtUsername.Text, password = hashedPassword }
             });
         }
 
@@ -169,19 +189,6 @@ namespace Messenger.Client
             lblError.Text = message;
             lblError.Visible = true;
             lblStatus.Visible = false;
-        }
-
-        private void SetRoundedRegion(Control ctrl, int radius)
-        {
-            using (var path = new System.Drawing.Drawing2D.GraphicsPath())
-            {
-                path.AddArc(0, 0, radius, radius, 180, 90);
-                path.AddArc(ctrl.Width - radius, 0, radius, radius, 270, 90);
-                path.AddArc(ctrl.Width - radius, ctrl.Height - radius, radius, radius, 0, 90);
-                path.AddArc(0, ctrl.Height - radius, radius, radius, 90, 90);
-                path.CloseFigure();
-                ctrl.Region = new Region(path);
-            }
         }
     }
 }

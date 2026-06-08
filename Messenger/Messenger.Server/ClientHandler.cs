@@ -29,6 +29,10 @@ namespace Messenger.Server
             this.server = server;
             this.db = db;
             stream = client.GetStream();
+
+            stream.ReadTimeout = 30000;
+            stream.WriteTimeout = 30000;
+
             reader = new StreamReader(stream, Encoding.UTF8);
             writer = new StreamWriter(stream, Encoding.UTF8) { AutoFlush = true };
             isConnected = true;
@@ -49,7 +53,7 @@ namespace Messenger.Server
                             ProcessPacket(packet);
                         }
                     }
-                    Thread.Sleep(100);
+                    Thread.Sleep(20);
                 }
             }
             catch (Exception ex)
@@ -207,8 +211,8 @@ namespace Messenger.Server
             var jsonElement = (JsonElement)packet.Data;
             int chatId = jsonElement.GetInt32();
 
-            // Проверяем, имеет ли пользователь доступ к чату
-            if (!db.UserHasAccessToChat(User.Id, chatId))
+            // Администратор имеет доступ к любому чату
+            if (!User.IsAdmin && !db.UserHasAccessToChat(User.Id, chatId))
             {
                 server.Log($"Пользователь {User.Id} пытается получить сообщения из чата {chatId} без доступа");
                 SendPacket(new NetworkPacket { Command = CommandType.MessagesList, Data = new List<Message>() });
@@ -371,6 +375,7 @@ namespace Messenger.Server
             if (chat == null || (chat.Type != ChatType.Department && chat.Type != ChatType.Group)) return;
 
             db.AddUserToChat(chatId, userId);
+            server.UpdateChatParticipantsCache(chatId);
 
             var updatedChat = db.GetChatById(chatId);
             updatedChat.Participants = db.GetChatParticipants(chatId);
@@ -402,6 +407,7 @@ namespace Messenger.Server
             if (chat == null || (chat.Type != ChatType.Department && chat.Type != ChatType.Group)) return;
 
             db.RemoveUserFromChat(chatId, userId);
+            server.UpdateChatParticipantsCache(chatId);
 
             var updatedChat = db.GetChatById(chatId);
             updatedChat.Participants = db.GetChatParticipants(chatId);
@@ -528,24 +534,68 @@ namespace Messenger.Server
         private void HandleUpdateUser(NetworkPacket packet)
         {
             if (User == null || !User.IsAdmin) return;
-            var jsonElement = (JsonElement)packet.Data;
-            string json = jsonElement.GetRawText();
-            var data = JsonSerializer.Deserialize<Dictionary<string, object>>(json);
-            var user = JsonSerializer.Deserialize<User>(data["user"].ToString());
-            int? oldDepartmentId = data.ContainsKey("oldDepartmentId") ? (int?)Convert.ToInt32(data["oldDepartmentId"]) : null;
-            string newPassword = data.ContainsKey("password") ? data["password"]?.ToString() : null;
 
-            // Обновляем основные данные пользователя
-            db.UpdateUser(user, newPassword);
-
-            // Если отдел изменился – синхронизируем членство в чатах отделов
-            if (oldDepartmentId != user.DepartmentId)
+            try
             {
-                db.UpdateUserDepartmentAndSyncChats(user.Id, user.DepartmentId);
-            }
+                var jsonElement = (JsonElement)packet.Data;
+                string json = jsonElement.GetRawText();
+                var data = JsonSerializer.Deserialize<Dictionary<string, object>>(json);
 
-            // Отправляем обновлённый список пользователей
-            SendPacket(new NetworkPacket { Command = CommandType.AllUsersList, Data = db.GetAllUsers() });
+                // Десериализуем пользователя
+                var user = JsonSerializer.Deserialize<User>(data["user"].ToString());
+
+                // Старый DepartmentId (переданный клиентом)
+                int? oldDepartmentId = data.ContainsKey("oldDepartmentId") && data["oldDepartmentId"] != null
+                    ? Convert.ToInt32(data["oldDepartmentId"])
+                    : (int?)null;
+
+                // Новый пароль (может быть null, если не меняется)
+                string newPassword = data.ContainsKey("password") ? data["password"]?.ToString() : null;
+
+                // Обновляем основные данные пользователя в БД
+                db.UpdateUser(user, newPassword);
+
+                // Если отдел изменился – синхронизируем членство в чатах отделов
+                if (oldDepartmentId != user.DepartmentId)
+                {
+                    db.UpdateUserDepartmentAndSyncChats(user.Id, user.DepartmentId);
+
+                    // Обновляем кеш для чата старого отдела (если чат существовал)
+                    if (oldDepartmentId.HasValue)
+                    {
+                        int? oldDeptChatId = db.GetDepartmentChatId(oldDepartmentId.Value);
+                        if (oldDeptChatId.HasValue)
+                            server.UpdateChatParticipantsCache(oldDeptChatId.Value);
+                    }
+
+                    // Обновляем кеш для чата нового отдела (если чат существует)
+                    if (user.DepartmentId.HasValue)
+                    {
+                        int? newDeptChatId = db.GetDepartmentChatId(user.DepartmentId.Value);
+                        if (newDeptChatId.HasValue)
+                            server.UpdateChatParticipantsCache(newDeptChatId.Value);
+                    }
+                }
+
+                // Отправляем обновлённый список всех пользователей администратору
+                var allUsers = db.GetAllUsers();
+                SendPacket(new NetworkPacket
+                {
+                    Command = CommandType.AllUsersList,
+                    Data = allUsers
+                });
+
+                server.Log($"Администратор {User.FullName} обновил пользователя {user.FullName} (Id={user.Id})");
+            }
+            catch (Exception ex)
+            {
+                server.Log($"Ошибка в HandleUpdateUser: {ex.Message}");
+                SendPacket(new NetworkPacket
+                {
+                    Command = CommandType.Error,
+                    Data = "Ошибка при обновлении пользователя"
+                });
+            }
         }
 
         private void HandleDeleteUser(NetworkPacket packet)
@@ -703,6 +753,7 @@ namespace Messenger.Server
             var chat = db.CreateDepartmentChat(departmentId);
             if (chat != null)
             {
+                server.UpdateChatParticipantsCache(chat.Id);
                 SendPacket(new NetworkPacket { Command = CommandType.ChatCreated, Data = chat });
                 // Оповестить всех пользователей отдела (у них появится новый чат)
                 var users = db.GetUsersByDepartment(departmentId); // нужно добавить этот метод в DB

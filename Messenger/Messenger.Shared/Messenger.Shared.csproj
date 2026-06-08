@@ -82,6 +82,7 @@
     <Compile Include="IniFile.cs" />
     <Compile Include="Message.cs" />
     <Compile Include="NetworkPacket.cs" />
+    <Compile Include="SecurityHelper.cs" />
     <Compile Include="User.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

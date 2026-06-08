@@ -51,19 +51,77 @@ namespace Messenger.Client
             {
                 var jsonElem = (JsonElement)packet.Data;
                 string json = jsonElem.GetRawText();
-                currentChat = JsonSerializer.Deserialize<Chat>(json);
+                Chat chat = null;
+                try
+                {
+                    chat = JsonSerializer.Deserialize<Chat>(json);
+                }
+                catch (JsonException ex)
+                {
+                    MessageBox.Show($"Ошибка загрузки участников: {ex.Message}");
+                    return;
+                }
+                currentChat = chat;
                 if (currentChat != null)
                 {
                     currentChat.Participants = currentChat.Participants ?? new List<User>();
                 }
+                UpdateParticipantsList(); // вызов ПЕРЕНЕСЁН СЮДА
             }
-            UpdateParticipantsList();
+            else if (packet.Command == Shared.CommandType.UserStatusChanged)
+            {
+                // Обновление статуса в реальном времени
+                var jsonElem = (JsonElement)packet.Data;
+                string json = jsonElem.GetRawText();
+                User updatedUser = null;
+                try
+                {
+                    updatedUser = JsonSerializer.Deserialize<User>(json);
+                }
+                catch (JsonException) { return; }
+                if (updatedUser != null && currentChat != null)
+                {
+                    UpdateUserStatusInList(updatedUser);
+                }
+            }
         }
 
-        private void BtnClose_Click(object sender, EventArgs e)
+        // Обновление статуса конкретного пользователя в ListView
+        private void UpdateUserStatusInList(User updatedUser)
         {
-            Close();
+            for (int i = 0; i < listViewParticipants.Items.Count; i++)
+            {
+                var item = listViewParticipants.Items[i];
+                if (item.Tag is User user && user.Id == updatedUser.Id)
+                {
+                    user.IsOnline = updatedUser.IsOnline;
+                    user.LastSeen = updatedUser.LastSeen;
+                    item.SubItems[2].Text = updatedUser.IsOnline ? "● Онлайн" : "● Офлайн";
+                    item.ForeColor = updatedUser.IsOnline ? Color.Green : Color.Red;
+                    break;
+                }
+            }
         }
+
+        private void UpdateParticipantsList()
+        {
+            if (currentChat == null) return; // ЗАЩИТА ОТ null
+
+            listViewParticipants.Items.Clear();
+            foreach (var user in currentChat.Participants.OrderBy(u => u.FullName))
+            {
+                ListViewItem item = new ListViewItem(user.FullName);
+                item.SubItems.Add(user.Position ?? "");
+                item.SubItems.Add(user.IsOnline ? "● Онлайн" : "● Офлайн");
+                item.Tag = user;
+                item.ForeColor = user.IsOnline ? Color.Green : Color.Red;
+                listViewParticipants.Items.Add(item);
+            }
+            lblChatName.Text = currentChat.Name;
+            lblParticipantCount.Text = $"Участников: {currentChat.Participants.Count}";
+        }
+
+        private void BtnClose_Click(object sender, EventArgs e) => Close();
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
@@ -82,57 +140,6 @@ namespace Messenger.Client
                 path.CloseFigure();
                 ctrl.Region = new Region(path);
             }
-        }
-
-        private void listViewParticipants_DrawColumnHeader(object sender, DrawListViewColumnHeaderEventArgs e)
-        {
-            // Рисуем только если индекс колонки 0,1,2
-            if (e.ColumnIndex < 0 || e.ColumnIndex > 2) return;
-
-            e.Graphics.FillRectangle(new SolidBrush(Color.FromArgb(230, 230, 230)), e.Bounds);
-            using (Pen borderPen = new Pen(Color.FromArgb(150, 150, 150), 1))
-            {
-                e.Graphics.DrawLine(borderPen, e.Bounds.Left, e.Bounds.Bottom - 1, e.Bounds.Right, e.Bounds.Bottom - 1);
-            }
-            using (Font boldFont = new Font(e.Font, FontStyle.Bold))
-            {
-                TextRenderer.DrawText(e.Graphics, e.Header.Text, boldFont, e.Bounds, Color.Black, TextFormatFlags.VerticalCenter | TextFormatFlags.Left);
-            }
-        }
-
-        private void listViewParticipants_DrawSubItem(object sender, DrawListViewSubItemEventArgs e)
-        {
-            // Рисуем ячейки только для колонок 0,1,2
-            if (e.ColumnIndex < 0 || e.ColumnIndex > 2) return;
-
-            e.Graphics.FillRectangle(Brushes.White, e.Bounds);
-            Color textColor = Color.Black;
-
-            if (e.ColumnIndex == 2) // статус
-            {
-                string status = e.SubItem.Text;
-                if (status.Contains("Онлайн"))
-                    textColor = Color.Green;
-                else if (status.Contains("Офлайн"))
-                    textColor = Color.Red;
-            }
-
-            TextRenderer.DrawText(e.Graphics, e.SubItem.Text, e.Item.Font, e.Bounds, textColor, TextFormatFlags.VerticalCenter | TextFormatFlags.Left);
-        }
-
-        private void UpdateParticipantsList()
-        {
-            listViewParticipants.Items.Clear();
-            foreach (var user in currentChat.Participants.OrderBy(u => u.FullName))
-            {
-                ListViewItem item = new ListViewItem(user.FullName);
-                item.SubItems.Add(user.Position ?? "");
-                item.SubItems.Add(user.IsOnline ? "● Онлайн" : "● Офлайн");
-                item.Tag = user;
-                listViewParticipants.Items.Add(item);
-            }
-            lblChatName.Text = currentChat.Name;
-            lblParticipantCount.Text = $"Участников: {currentChat.Participants.Count}";
         }
     }
 }

@@ -21,14 +21,21 @@ namespace Messenger.Client
         private List<User> allUsers;
         private List<User> participants;
 
-        public ManageParticipantsForm(int chatId, int currentUserId, NetworkClient client)
+        public ManageParticipantsForm(int chatId, int currentUserId, NetworkClient client, bool isAdmin)
         {
             InitializeComponent();
-            this.Load += (s, e) => SetRoundedRegion(this, 20);
+            UIHelper.SetRoundedRegion(this, 20);
             this.chatId = chatId;
             this.currentUserId = currentUserId;
             this.networkClient = client;
             this.networkClient.OnPacketReceived += OnPacketReceived;
+
+            if (!isAdmin)
+            {
+                btnAdd.Visible = false;
+                btnRemove.Visible = false;
+                this.Text = "Просмотр участников";
+            }
 
             // Подписка на события кнопок
             this.btnAdd.Click += BtnAdd_Click;
@@ -72,15 +79,35 @@ namespace Messenger.Client
                     case Shared.CommandType.ChatInfo:
                         var jsonElem = (JsonElement)packet.Data;
                         string json = jsonElem.GetRawText();
-                        currentChat = JsonSerializer.Deserialize<Chat>(json);
-                        participants = currentChat.Participants;
+                        Chat chat = null;
+                        try
+                        {
+                            chat = JsonSerializer.Deserialize<Chat>(json);
+                        }
+                        catch (JsonException ex)
+                        {
+                            MessageBox.Show($"Ошибка загрузки информации о чате: {ex.Message}");
+                            return;
+                        }
+                        currentChat = chat;
+                        participants = currentChat?.Participants ?? new List<User>();
                         UpdateParticipantsList();
                         break;
 
                     case Shared.CommandType.AvailableUsersList:
                         var jsonElem2 = (JsonElement)packet.Data;
                         string json2 = jsonElem2.GetRawText();
-                        allUsers = JsonSerializer.Deserialize<List<User>>(json2);
+                        List<User> users = null;
+                        try
+                        {
+                            users = JsonSerializer.Deserialize<List<User>>(json2);
+                        }
+                        catch (JsonException ex)
+                        {
+                            MessageBox.Show($"Ошибка загрузки доступных пользователей: {ex.Message}");
+                            return;
+                        }
+                        allUsers = users;
                         UpdateAvailableTree();
                         break;
 
@@ -98,13 +125,11 @@ namespace Messenger.Client
         private void UpdateParticipantsList()
         {
             lstParticipants.Items.Clear();
-            if (participants != null)
+            if (participants == null) return;
+
+            foreach (var user in participants.OrderBy(u => u.FullName))
             {
-                lstParticipants.DisplayMember = "FullName";
-                foreach (var user in participants.OrderBy(u => u.FullName))
-                {
-                    lstParticipants.Items.Add(user);
-                }
+                lstParticipants.Items.Add(new UserListItem { User = user });
             }
         }
 
@@ -156,8 +181,9 @@ namespace Messenger.Client
 
         private void BtnRemove_Click(object sender, EventArgs e)
         {
-            if (lstParticipants.SelectedItem is User user)
+            if (lstParticipants.SelectedItem is UserListItem item)
             {
+                var user = item.User;
                 if (user.Id == currentUserId)
                 {
                     MessageBox.Show("Нельзя удалить себя из чата.", "Внимание", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -197,18 +223,16 @@ namespace Messenger.Client
             networkClient.OnPacketReceived -= OnPacketReceived;
             base.OnFormClosing(e);
         }
+    }
 
-        private void SetRoundedRegion(Control ctrl, int radius)
+    public class UserListItem
+    {
+        public User User { get; set; }
+        public override string ToString()
         {
-            using (var path = new System.Drawing.Drawing2D.GraphicsPath())
-            {
-                path.AddArc(0, 0, radius, radius, 180, 90);
-                path.AddArc(ctrl.Width - radius, 0, radius, radius, 270, 90);
-                path.AddArc(ctrl.Width - radius, ctrl.Height - radius, radius, radius, 0, 90);
-                path.AddArc(0, ctrl.Height - radius, radius, radius, 90, 90);
-                path.CloseFigure();
-                ctrl.Region = new Region(path);
-            }
+            return string.IsNullOrEmpty(User.Position)
+                ? User.FullName
+                : $"{User.FullName} ({User.Position})";
         }
     }
 }

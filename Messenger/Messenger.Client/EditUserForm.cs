@@ -17,11 +17,12 @@ namespace Messenger.Client
         private List<Department> departments;
         private NetworkClient networkClient;
         private bool isNewUser;
+        private int? oldDepartmentId;
 
         public EditUserForm(User user, List<Department> depts, NetworkClient client)
         {
             InitializeComponent();
-            this.Load += (s, e) => SetRoundedRegion(this, 20);
+            UIHelper.SetRoundedRegion(this, 20);
             editingUser = user;
             departments = depts;
             networkClient = client;
@@ -31,6 +32,7 @@ namespace Messenger.Client
 
             if (!isNewUser)
             {
+                oldDepartmentId = editingUser.DepartmentId;
                 lblTitle.Text = "Редактирование пользователя";
                 txtUsername.Text = editingUser.Username;
                 txtFullName.Text = editingUser.FullName;
@@ -111,17 +113,22 @@ namespace Messenger.Client
             var packet = new NetworkPacket();
             if (isNewUser)
             {
+                string hashedPassword = SecurityHelper.HashPassword(txtPassword.Text);
                 packet.Command = Shared.CommandType.AddUser;
-                packet.Data = new { user, password = txtPassword.Text };
+                packet.Data = new { user, password = hashedPassword };
             }
             else
             {
-                packet.Command = Shared.CommandType.UpdateUser;
+                string newPassword = string.IsNullOrWhiteSpace(txtPassword.Text)
+                    ? null
+                    : SecurityHelper.HashPassword(txtPassword.Text);
                 var data = new Dictionary<string, object>
                 {
                     { "user", user },
-                    { "password", string.IsNullOrWhiteSpace(txtPassword.Text) ? null : txtPassword.Text }
+                    { "password", newPassword },
+                    { "oldDepartmentId", oldDepartmentId }
                 };
+                packet.Command = Shared.CommandType.UpdateUser;
                 packet.Data = data;
             }
             networkClient.SendPacket(packet);
@@ -133,19 +140,6 @@ namespace Messenger.Client
         {
             DialogResult = DialogResult.Cancel;
             Close();
-        }
-
-        private void SetRoundedRegion(Control ctrl, int radius)
-        {
-            using (var path = new System.Drawing.Drawing2D.GraphicsPath())
-            {
-                path.AddArc(0, 0, radius, radius, 180, 90);
-                path.AddArc(ctrl.Width - radius, 0, radius, radius, 270, 90);
-                path.AddArc(ctrl.Width - radius, ctrl.Height - radius, radius, radius, 0, 90);
-                path.AddArc(0, ctrl.Height - radius, radius, radius, 90, 90);
-                path.CloseFigure();
-                ctrl.Region = new Region(path);
-            }
         }
     }
 }

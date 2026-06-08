@@ -40,7 +40,7 @@ namespace Messenger.Client
         {
             InitializeComponent();
 
-            this.Load += (s, e) => SetRoundedRegion(this, 20);
+            UIHelper.SetRoundedRegion(this, 20);
 
             cmbChat.DataSource = null;
 
@@ -106,7 +106,6 @@ namespace Messenger.Client
             networkClient.SendPacket(new NetworkPacket { Command = Shared.CommandType.GetAllUsers });
             networkClient.SendPacket(new NetworkPacket { Command = Shared.CommandType.GetDepartments });
             networkClient.SendPacket(new NetworkPacket { Command = Shared.CommandType.GetChatsForHistory });
-            networkClient.SendPacket(new NetworkPacket { Command = CommandType.GetAllDepartments });
         }
 
         private void OnPacketReceived(NetworkPacket packet)
@@ -187,19 +186,6 @@ namespace Messenger.Client
             catch (Exception ex)
             {
                 MessageBox.Show($"Ошибка: {ex.Message}");
-            }
-        }
-
-        private void SetRoundedRegion(Control ctrl, int radius)
-        {
-            using (var path = new System.Drawing.Drawing2D.GraphicsPath())
-            {
-                path.AddArc(0, 0, radius, radius, 180, 90);
-                path.AddArc(ctrl.Width - radius, 0, radius, radius, 270, 90);
-                path.AddArc(ctrl.Width - radius, ctrl.Height - radius, radius, radius, 0, 90);
-                path.AddArc(0, ctrl.Height - radius, radius, radius, 90, 90);
-                path.CloseFigure();
-                ctrl.Region = new Region(path);
             }
         }
 
@@ -689,7 +675,7 @@ namespace Messenger.Client
                 return;
             }
 
-            using (var form = new ManageParticipantsForm(selectedChat.Id, currentUser.Id, networkClient))
+            using (var form = new ManageParticipantsForm(selectedChat.Id, currentUser.Id, networkClient, currentUser.IsAdmin))
                 form.ShowDialog();
         }
 
@@ -915,6 +901,7 @@ namespace Messenger.Client
                 Command = CommandType.CreateDepartmentChat,
                 Data = dept.Id
             });
+            LoadData();
         }
 
         private void BtnDeleteDeptChat_Click(object sender, EventArgs e)
@@ -947,6 +934,7 @@ namespace Messenger.Client
                 Command = CommandType.DeleteChat,
                 Data = dept.ChatId.Value   // передаём ID чата
             });
+            LoadData();
         }
     }
 }

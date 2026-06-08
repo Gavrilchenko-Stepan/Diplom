@@ -100,7 +100,6 @@
             this.listViewParticipants.HideSelection = false;
             this.listViewParticipants.Location = new System.Drawing.Point(20, 85);
             this.listViewParticipants.Name = "listViewParticipants";
-            this.listViewParticipants.OwnerDraw = true;
             this.listViewParticipants.Size = new System.Drawing.Size(500, 320);
             this.listViewParticipants.TabIndex = 3;
             this.listViewParticipants.UseCompatibleStateImageBehavior = false;
@@ -110,10 +109,6 @@
             this.colName.Width = 180;
             this.colPosition.Width = 200;
             this.colStatus.Width = 100;   // остаток – 500 - 20поле - 180-200-100 = 0, ничего лишнего
-
-            // Подписываем события отрисовки
-            this.listViewParticipants.DrawColumnHeader += new System.Windows.Forms.DrawListViewColumnHeaderEventHandler(this.listViewParticipants_DrawColumnHeader);
-            this.listViewParticipants.DrawSubItem += new System.Windows.Forms.DrawListViewSubItemEventHandler(this.listViewParticipants_DrawSubItem);
             // 
             // colName
             // 
@@ -128,7 +123,7 @@
             // colStatus
             // 
             this.colStatus.Text = "Статус";
-            this.colStatus.Width = 100;
+            this.colStatus.Width = 120;
             // 
             // btnClose
             // 

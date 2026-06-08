@@ -203,42 +203,72 @@ namespace Messenger.Server
         }
 
         // ---------- User Operations ----------
-        public User AuthenticateUser(string username, string password)
+        public User AuthenticateUser(string username, string passwordHash)
         {
             lock (dbLock)
             {
                 string query = @"
             SELECT u.id, u.username, u.password, u.full_name, u.department_id, u.position, u.is_admin, d.name as department_name 
             FROM users u
-            JOIN departments d ON u.department_id = d.id
-            WHERE u.username = @username AND u.password = @password";
-
+            LEFT JOIN departments d ON u.department_id = d.id
+            WHERE u.username = @username";
                 using (var cmd = new SQLiteCommand(query, connection))
                 {
                     cmd.Parameters.AddWithValue("@username", username);
-                    cmd.Parameters.AddWithValue("@password", password);
-
                     using (var reader = cmd.ExecuteReader())
                     {
                         if (reader.Read())
                         {
-                            return new User
+                            string storedPassword = reader.GetString(2);
+                            bool passwordMatch;
+
+                            // Если сохранённый пароль – хеш (64 символа hex), сравниваем напрямую
+                            if (storedPassword.Length == 64 && IsHexString(storedPassword))
+                                passwordMatch = storedPassword == passwordHash;
+                            else
+                                // Иначе это plain text – хешируем его и сравниваем
+                                passwordMatch = SecurityHelper.HashPassword(storedPassword) == passwordHash;
+
+                            if (passwordMatch)
                             {
-                                Id = reader.GetInt32(0),
-                                Username = reader.GetString(1),
-                                Password = reader.GetString(2),
-                                FullName = reader.GetString(3),
-                                DepartmentId = reader.IsDBNull(4) ? (int?)null : reader.GetInt32(4),
-                                Position = reader.IsDBNull(5) ? null : reader.GetString(5),
-                                IsAdmin = !reader.IsDBNull(6) && reader.GetInt32(6) == 1,  // <-- исправлено
-                                Department = reader.GetString(7),
-                                IsOnline = false
-                            };
+                                // Если пароль был plain text – обновляем на хеш
+                                if (storedPassword.Length != 64)
+                                {
+                                    string update = "UPDATE users SET password = @hash WHERE id = @id";
+                                    using (var updateCmd = new SQLiteCommand(update, connection))
+                                    {
+                                        updateCmd.Parameters.AddWithValue("@hash", passwordHash);
+                                        updateCmd.Parameters.AddWithValue("@id", reader.GetInt32(0));
+                                        updateCmd.ExecuteNonQuery();
+                                    }
+                                }
+
+                                return new User
+                                {
+                                    Id = reader.GetInt32(0),
+                                    Username = reader.GetString(1),
+                                    Password = reader.GetString(2), // здесь может остаться старый plain, но это неважно
+                                    FullName = reader.GetString(3),
+                                    DepartmentId = reader.IsDBNull(4) ? (int?)null : reader.GetInt32(4),
+                                    Position = reader.IsDBNull(5) ? null : reader.GetString(5),
+                                    IsAdmin = !reader.IsDBNull(6) && reader.GetInt32(6) == 1,
+                                    Department = reader.GetString(7),
+                                    IsOnline = false
+                                };
+                            }
                         }
                     }
                 }
                 return null;
             }
+        }
+
+        private bool IsHexString(string str)
+        {
+            foreach (char c in str)
+                if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')))
+                    return false;
+            return true;
         }
 
         public void UpdateUserStatus(int userId, bool isOnline)
@@ -261,12 +291,12 @@ namespace Messenger.Server
             lock (dbLock)
             {
                 string query = @"
-            SELECT u.id, u.username, u.full_name, u.department_id, u.position, u.is_admin, d.name as department_name, us.is_online, us.last_seen
-            FROM users u
-            JOIN departments d ON u.department_id = d.id
-            LEFT JOIN user_status us ON u.id = us.user_id
-            WHERE u.id != @currentUserId
-            ORDER BY us.is_online DESC, u.full_name";
+                    SELECT u.id, u.username, u.full_name, u.department_id, u.position, u.is_admin, d.name as department_name, us.is_online, us.last_seen
+                    FROM users u
+                    LEFT JOIN departments d ON u.department_id = d.id   -- исправлено
+                    LEFT JOIN user_status us ON u.id = us.user_id
+                    WHERE u.id != @currentUserId
+                    ORDER BY us.is_online DESC, u.full_name";
                 using (var cmd = new SQLiteCommand(query, connection))
                 {
                     cmd.Parameters.AddWithValue("@currentUserId", currentUserId);
@@ -367,12 +397,11 @@ namespace Messenger.Server
             {
                 var users = new List<User>();
                 string query = @"
-            SELECT u.id, u.username, u.full_name, u.department_id, u.position, u.is_admin, d.name as department_name, us.is_online, us.last_seen
-            FROM users u
-            JOIN chat_participants cp ON u.id = cp.user_id
-            JOIN departments d ON u.department_id = d.id
-            LEFT JOIN user_status us ON u.id = us.user_id
-            WHERE cp.chat_id = @chatId";
+                    SELECT u.id, u.username, u.full_name, u.department_id, u.position, u.is_admin, d.name as department_name, us.is_online, us.last_seen
+                    FROM users u
+                    LEFT JOIN departments d ON u.department_id = d.id   -- исправлено
+                    LEFT JOIN user_status us ON u.id = us.user_id
+                    WHERE cp.chat_id = @chatId";
                 using (var cmd = new SQLiteCommand(query, connection))
                 {
                     cmd.Parameters.AddWithValue("@chatId", chatId);
@@ -601,13 +630,13 @@ namespace Messenger.Server
             lock (dbLock)
             {
                 string query = @"
-            SELECT m.id, m.chat_id, m.sender_id, m.text, m.sent_at, m.is_read, 
-                   u.full_name, d.name as department_name, m.edited_at
-            FROM messages m
-            JOIN users u ON m.sender_id = u.id
-            JOIN departments d ON u.department_id = d.id
-            WHERE m.chat_id = @cid
-            ORDER BY m.sent_at ASC LIMIT 100";
+                    SELECT m.id, m.chat_id, m.sender_id, m.text, m.sent_at, m.is_read, 
+                           u.full_name, d.name as department_name, m.edited_at
+                    FROM messages m
+                    JOIN users u ON m.sender_id = u.id
+                    LEFT JOIN departments d ON u.department_id = d.id   -- было INNER JOIN
+                    WHERE m.chat_id = @cid
+                    ORDER BY m.sent_at ASC LIMIT 100";
                 using (var cmd = new SQLiteCommand(query, connection))
                 {
                     cmd.Parameters.AddWithValue("@cid", chatId);
@@ -794,11 +823,11 @@ namespace Messenger.Server
             lock (dbLock)
             {
                 string query = @"
-            SELECT u.id, u.username, u.password, u.full_name, u.department_id, u.position, u.is_admin, d.name as department_name, us.is_online, us.last_seen
-            FROM users u
-            JOIN departments d ON u.department_id = d.id
-            LEFT JOIN user_status us ON u.id = us.user_id
-            ORDER BY d.name, u.full_name";
+                    SELECT u.id, u.username, u.password, u.full_name, u.department_id, u.position, u.is_admin, d.name as department_name, us.is_online, us.last_seen
+                    FROM users u
+                    LEFT JOIN departments d ON u.department_id = d.id   -- исправлено
+                    LEFT JOIN user_status us ON u.id = us.user_id
+                    ORDER BY COALESCE(d.name, 'Без отдела'), u.full_name";
                 using (var cmd = new SQLiteCommand(query, connection))
                 using (var reader = cmd.ExecuteReader())
                 {
@@ -823,7 +852,7 @@ namespace Messenger.Server
             return users;
         }
 
-        public void AddUser(User user, string password)
+        public void AddUser(User user, string passwordHash)
         {
             lock (dbLock)
             {
@@ -831,7 +860,7 @@ namespace Messenger.Server
                 using (var cmd = new SQLiteCommand(query, connection))
                 {
                     cmd.Parameters.AddWithValue("@u", user.Username);
-                    cmd.Parameters.AddWithValue("@p", password);
+                    cmd.Parameters.AddWithValue("@p", passwordHash);
                     cmd.Parameters.AddWithValue("@f", user.FullName);
                     cmd.Parameters.AddWithValue("@d", user.DepartmentId);
                     cmd.Parameters.AddWithValue("@pos", user.Position ?? (object)DBNull.Value);
@@ -841,12 +870,12 @@ namespace Messenger.Server
             }
         }
 
-        public void UpdateUser(User user, string newPassword = null)
+        public void UpdateUser(User user, string newPasswordHash = null)
         {
             lock (dbLock)
             {
                 string query = "UPDATE users SET username = @u, full_name = @f, department_id = @d, position = @pos, is_admin = @admin";
-                if (!string.IsNullOrEmpty(newPassword))
+                if (!string.IsNullOrEmpty(newPasswordHash))
                     query += ", password = @p";
                 query += " WHERE id = @id";
                 using (var cmd = new SQLiteCommand(query, connection))
@@ -856,8 +885,8 @@ namespace Messenger.Server
                     cmd.Parameters.AddWithValue("@d", user.DepartmentId);
                     cmd.Parameters.AddWithValue("@pos", user.Position ?? (object)DBNull.Value);
                     cmd.Parameters.AddWithValue("@admin", user.IsAdmin ? 1 : 0);
-                    if (!string.IsNullOrEmpty(newPassword))
-                        cmd.Parameters.AddWithValue("@p", newPassword);
+                    if (!string.IsNullOrEmpty(newPasswordHash))
+                        cmd.Parameters.AddWithValue("@p", newPasswordHash);
                     cmd.Parameters.AddWithValue("@id", user.Id);
                     cmd.ExecuteNonQuery();
                 }
@@ -891,25 +920,32 @@ namespace Messenger.Server
             }
         }
 
-        public bool ChangePassword(int userId, string oldPassword, string newPassword)
+        public bool ChangePassword(int userId, string oldPasswordHash, string newPasswordHash)
         {
             lock (dbLock)
             {
-                // Проверяем старый пароль
-                string check = "SELECT COUNT(*) FROM users WHERE id = @id AND password = @old";
+                // Получаем текущий пароль из БД
+                string check = "SELECT password FROM users WHERE id = @id";
                 using (var cmd = new SQLiteCommand(check, connection))
                 {
                     cmd.Parameters.AddWithValue("@id", userId);
-                    cmd.Parameters.AddWithValue("@old", oldPassword);
-                    if (Convert.ToInt32(cmd.ExecuteScalar()) == 0)
-                        return false;
+                    var stored = cmd.ExecuteScalar()?.ToString();
+                    if (stored == null) return false;
+
+                    bool match;
+                    if (stored.Length == 64 && IsHexString(stored))
+                        match = stored == oldPasswordHash;
+                    else
+                        match = SecurityHelper.HashPassword(stored) == oldPasswordHash;
+
+                    if (!match) return false;
                 }
 
-                // Обновляем пароль
+                // Обновляем пароль на новый хеш
                 string update = "UPDATE users SET password = @new WHERE id = @id";
                 using (var cmd = new SQLiteCommand(update, connection))
                 {
-                    cmd.Parameters.AddWithValue("@new", newPassword);
+                    cmd.Parameters.AddWithValue("@new", newPasswordHash);
                     cmd.Parameters.AddWithValue("@id", userId);
                     cmd.ExecuteNonQuery();
                 }
@@ -969,21 +1005,21 @@ namespace Messenger.Server
                 using (var cmd = new SQLiteCommand(connection))
                 {
                     string sql = @"
-                SELECT 
-                    m.id,
-                    c.name AS ChatName,
-                    c.type AS ChatType,
-                    u.full_name AS UserName,
-                    u.username AS Login,
-                    d.name AS Department,
-                    m.text AS MessageText,
-                    m.sent_at AS SentAt,
-                    m.edited_at AS EditedAt
-                FROM messages m
-                JOIN chats c ON m.chat_id = c.id
-                JOIN users u ON m.sender_id = u.id
-                JOIN departments d ON u.department_id = d.id
-                WHERE 1=1 ";
+                        SELECT 
+                            m.id,
+                            c.name AS ChatName,
+                            c.type AS ChatType,
+                            u.full_name AS UserName,
+                            u.username AS Login,
+                            d.name AS Department,
+                            m.text AS MessageText,
+                            m.sent_at AS SentAt,
+                            m.edited_at AS EditedAt
+                        FROM messages m
+                        JOIN chats c ON m.chat_id = c.id
+                        JOIN users u ON m.sender_id = u.id
+                        LEFT JOIN departments d ON u.department_id = d.id   -- исправлено
+                        WHERE 1=1 ";
                     if (chatId.HasValue && chatId.Value > 0)
                     {
                         sql += " AND m.chat_id = @chatId";
@@ -1054,8 +1090,6 @@ namespace Messenger.Server
                     int newId = Convert.ToInt32(cmd.ExecuteScalar());
                     department.Id = newId;
                 }
-                // Создаём чат для нового отдела
-                EnsureDepartmentChat(department.Id);
             }
         }
 
@@ -1208,16 +1242,17 @@ namespace Messenger.Server
             }
         }
 
-        private int? GetDepartmentChatId(int departmentId)
+        public int? GetDepartmentChatId(int departmentId)
         {
-            string query = "SELECT chat_id FROM departments WHERE id = @id";
-            using (var cmd = new SQLiteCommand(query, connection))
+            lock (dbLock)
             {
-                cmd.Parameters.AddWithValue("@id", departmentId);
-                var res = cmd.ExecuteScalar();
-                if (res != null && res != DBNull.Value)
-                    return Convert.ToInt32(res);
-                return null;
+                string query = "SELECT chat_id FROM departments WHERE id = @id";
+                using (var cmd = new SQLiteCommand(query, connection))
+                {
+                    cmd.Parameters.AddWithValue("@id", departmentId);
+                    var result = cmd.ExecuteScalar();
+                    return result != null && result != DBNull.Value ? Convert.ToInt32(result) : (int?)null;
+                }
             }
         }
 
@@ -1227,11 +1262,11 @@ namespace Messenger.Server
             lock (dbLock)
             {
                 string query = @"
-            SELECT u.id, u.username, u.password, u.full_name, u.department_id, u.position, u.is_admin, d.name as department_name, us.is_online, us.last_seen
-            FROM users u
-            LEFT JOIN departments d ON u.department_id = d.id
-            LEFT JOIN user_status us ON u.id = us.user_id
-            WHERE u.department_id = @deptId";
+                    SELECT u.id, u.username, u.password, u.full_name, u.department_id, u.position, u.is_admin, d.name as department_name, us.is_online, us.last_seen
+                    FROM users u
+                    LEFT JOIN departments d ON u.department_id = d.id
+                    LEFT JOIN user_status us ON u.id = us.user_id
+                    WHERE u.department_id = @deptId";
                 using (var cmd = new SQLiteCommand(query, connection))
                 {
                     cmd.Parameters.AddWithValue("@deptId", departmentId);

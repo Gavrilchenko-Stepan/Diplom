@@ -61,7 +61,7 @@
             // 
             // panelMain
             // 
-            this.panelMain.BackColor = System.Drawing.Color.FromArgb(45, 45, 58);
+            this.panelMain.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(45)))), ((int)(((byte)(58)))));
             this.panelMain.Controls.Add(this.lblTitle);
             this.panelMain.Controls.Add(this.lblFullName);
             this.panelMain.Controls.Add(this.txtFullName);
@@ -84,7 +84,7 @@
             // lblTitle
             // 
             this.lblTitle.Font = new System.Drawing.Font("Segoe UI", 16F, System.Drawing.FontStyle.Bold);
-            this.lblTitle.ForeColor = System.Drawing.Color.FromArgb(0, 229, 255);
+            this.lblTitle.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
             this.lblTitle.Location = new System.Drawing.Point(24, 20);
             this.lblTitle.Name = "lblTitle";
             this.lblTitle.Size = new System.Drawing.Size(432, 35);
@@ -99,13 +99,13 @@
             this.lblFullName.ForeColor = System.Drawing.Color.White;
             this.lblFullName.Location = new System.Drawing.Point(24, 75);
             this.lblFullName.Name = "lblFullName";
-            this.lblFullName.Size = new System.Drawing.Size(38, 15);
+            this.lblFullName.Size = new System.Drawing.Size(29, 15);
             this.lblFullName.TabIndex = 1;
-            this.lblFullName.Text = "ФИО:";
+            this.lblFullName.Text = "ФИ:";
             // 
             // txtFullName
             // 
-            this.txtFullName.BackColor = System.Drawing.Color.FromArgb(60, 60, 80);
+            this.txtFullName.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(60)))), ((int)(((byte)(60)))), ((int)(((byte)(80)))));
             this.txtFullName.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.txtFullName.Font = new System.Drawing.Font("Segoe UI", 9F);
             this.txtFullName.ForeColor = System.Drawing.Color.White;
@@ -128,7 +128,7 @@
             // 
             // txtUsername
             // 
-            this.txtUsername.BackColor = System.Drawing.Color.FromArgb(60, 60, 80);
+            this.txtUsername.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(60)))), ((int)(((byte)(60)))), ((int)(((byte)(80)))));
             this.txtUsername.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.txtUsername.Font = new System.Drawing.Font("Segoe UI", 9F);
             this.txtUsername.ForeColor = System.Drawing.Color.White;
@@ -151,7 +151,7 @@
             // 
             // txtDepartment
             // 
-            this.txtDepartment.BackColor = System.Drawing.Color.FromArgb(60, 60, 80);
+            this.txtDepartment.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(60)))), ((int)(((byte)(60)))), ((int)(((byte)(80)))));
             this.txtDepartment.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.txtDepartment.Font = new System.Drawing.Font("Segoe UI", 9F);
             this.txtDepartment.ForeColor = System.Drawing.Color.White;
@@ -174,7 +174,7 @@
             // 
             // txtPosition
             // 
-            this.txtPosition.BackColor = System.Drawing.Color.FromArgb(60, 60, 80);
+            this.txtPosition.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(60)))), ((int)(((byte)(60)))), ((int)(((byte)(80)))));
             this.txtPosition.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.txtPosition.Font = new System.Drawing.Font("Segoe UI", 9F);
             this.txtPosition.ForeColor = System.Drawing.Color.White;
@@ -186,16 +186,16 @@
             // 
             // grpPassword
             // 
-            this.grpPassword.BackColor = System.Drawing.Color.FromArgb(45, 45, 58);
-            this.grpPassword.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.grpPassword.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(45)))), ((int)(((byte)(45)))), ((int)(((byte)(58)))));
             this.grpPassword.Controls.Add(this.lblOldPassword);
             this.grpPassword.Controls.Add(this.txtOldPassword);
             this.grpPassword.Controls.Add(this.lblNewPassword);
             this.grpPassword.Controls.Add(this.txtNewPassword);
             this.grpPassword.Controls.Add(this.lblConfirmPassword);
             this.grpPassword.Controls.Add(this.txtConfirmPassword);
+            this.grpPassword.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.grpPassword.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
-            this.grpPassword.ForeColor = System.Drawing.Color.FromArgb(0, 229, 255);
+            this.grpPassword.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
             this.grpPassword.Location = new System.Drawing.Point(24, 315);
             this.grpPassword.Name = "grpPassword";
             this.grpPassword.Size = new System.Drawing.Size(432, 194);
@@ -216,7 +216,7 @@
             // 
             // txtOldPassword
             // 
-            this.txtOldPassword.BackColor = System.Drawing.Color.FromArgb(60, 60, 80);
+            this.txtOldPassword.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(60)))), ((int)(((byte)(60)))), ((int)(((byte)(80)))));
             this.txtOldPassword.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.txtOldPassword.Font = new System.Drawing.Font("Segoe UI", 9F);
             this.txtOldPassword.ForeColor = System.Drawing.Color.White;
@@ -239,7 +239,7 @@
             // 
             // txtNewPassword
             // 
-            this.txtNewPassword.BackColor = System.Drawing.Color.FromArgb(60, 60, 80);
+            this.txtNewPassword.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(60)))), ((int)(((byte)(60)))), ((int)(((byte)(80)))));
             this.txtNewPassword.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.txtNewPassword.Font = new System.Drawing.Font("Segoe UI", 9F);
             this.txtNewPassword.ForeColor = System.Drawing.Color.White;
@@ -262,7 +262,7 @@
             // 
             // txtConfirmPassword
             // 
-            this.txtConfirmPassword.BackColor = System.Drawing.Color.FromArgb(60, 60, 80);
+            this.txtConfirmPassword.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(60)))), ((int)(((byte)(60)))), ((int)(((byte)(80)))));
             this.txtConfirmPassword.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.txtConfirmPassword.Font = new System.Drawing.Font("Segoe UI", 9F);
             this.txtConfirmPassword.ForeColor = System.Drawing.Color.White;
@@ -274,7 +274,7 @@
             // 
             // btnSave
             // 
-            this.btnSave.BackColor = System.Drawing.Color.FromArgb(0, 229, 255);
+            this.btnSave.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
             this.btnSave.FlatAppearance.BorderSize = 0;
             this.btnSave.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnSave.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
@@ -290,10 +290,10 @@
             // btnCancel
             // 
             this.btnCancel.BackColor = System.Drawing.Color.Transparent;
-            this.btnCancel.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(0, 229, 255);
+            this.btnCancel.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
             this.btnCancel.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnCancel.Font = new System.Drawing.Font("Segoe UI", 10F);
-            this.btnCancel.ForeColor = System.Drawing.Color.FromArgb(0, 229, 255);
+            this.btnCancel.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
             this.btnCancel.Location = new System.Drawing.Point(346, 528);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(110, 34);
@@ -306,7 +306,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.BackColor = System.Drawing.Color.FromArgb(30, 30, 46);
+            this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(46)))));
             this.ClientSize = new System.Drawing.Size(480, 600);
             this.Controls.Add(this.panelMain);
             this.Font = new System.Drawing.Font("Segoe UI", 9F);
@@ -321,6 +321,7 @@
             this.grpPassword.ResumeLayout(false);
             this.grpPassword.PerformLayout();
             this.ResumeLayout(false);
+
         }
     }
 }
