@@ -38,8 +38,16 @@ namespace Messenger.Client
                 txtFullName.Text = editingUser.FullName;
                 txtPosition.Text = editingUser.Position;
                 chkIsAdmin.Checked = editingUser.IsAdmin;
-                cmbDepartment.SelectedValue = editingUser.DepartmentId;
-                // Пароль оставляем пустым – не менять, если не введён
+                if (editingUser.DepartmentId.HasValue)
+                {
+                    var selected = cmbDepartment.Items.Cast<dynamic>().FirstOrDefault(x => x.Id == editingUser.DepartmentId);
+                    if (selected != null)
+                        cmbDepartment.SelectedItem = selected;
+                }
+                else
+                {
+                    cmbDepartment.SelectedIndex = 0;
+                }
             }
             else
             {

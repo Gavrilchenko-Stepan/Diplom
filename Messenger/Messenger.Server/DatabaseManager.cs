@@ -291,12 +291,12 @@ namespace Messenger.Server
             lock (dbLock)
             {
                 string query = @"
-                    SELECT u.id, u.username, u.full_name, u.department_id, u.position, u.is_admin, d.name as department_name, us.is_online, us.last_seen
-                    FROM users u
-                    LEFT JOIN departments d ON u.department_id = d.id   -- исправлено
-                    LEFT JOIN user_status us ON u.id = us.user_id
-                    WHERE u.id != @currentUserId
-                    ORDER BY us.is_online DESC, u.full_name";
+            SELECT u.id, u.username, u.full_name, u.department_id, u.position, u.is_admin, d.name as department_name, us.is_online, us.last_seen
+            FROM users u
+            LEFT JOIN departments d ON u.department_id = d.id
+            LEFT JOIN user_status us ON u.id = us.user_id
+            WHERE u.id != @currentUserId
+            ORDER BY us.is_online DESC, u.full_name";
                 using (var cmd = new SQLiteCommand(query, connection))
                 {
                     cmd.Parameters.AddWithValue("@currentUserId", currentUserId);
@@ -311,8 +311,8 @@ namespace Messenger.Server
                                 FullName = reader.GetString(2),
                                 DepartmentId = reader.IsDBNull(3) ? (int?)null : reader.GetInt32(3),
                                 Position = reader.IsDBNull(4) ? null : reader.GetString(4),
-                                IsAdmin = !reader.IsDBNull(5) && reader.GetInt32(5) == 1,  // <-- исправлено
-                                Department = reader.GetString(6),
+                                IsAdmin = !reader.IsDBNull(5) && reader.GetInt32(5) == 1,
+                                Department = reader.IsDBNull(6) ? null : reader.GetString(6),
                                 IsOnline = !reader.IsDBNull(7) && reader.GetBoolean(7),
                                 LastSeen = reader.IsDBNull(8) ? (DateTime?)null : reader.GetDateTime(8)
                             });
@@ -837,11 +837,11 @@ namespace Messenger.Server
             lock (dbLock)
             {
                 string query = @"
-                    SELECT u.id, u.username, u.password, u.full_name, u.department_id, u.position, u.is_admin, d.name as department_name, us.is_online, us.last_seen
-                    FROM users u
-                    LEFT JOIN departments d ON u.department_id = d.id   -- исправлено
-                    LEFT JOIN user_status us ON u.id = us.user_id
-                    ORDER BY COALESCE(d.name, 'Без отдела'), u.full_name";
+            SELECT u.id, u.username, u.password, u.full_name, u.department_id, u.position, u.is_admin, d.name as department_name, us.is_online, us.last_seen
+            FROM users u
+            LEFT JOIN departments d ON u.department_id = d.id
+            LEFT JOIN user_status us ON u.id = us.user_id
+            ORDER BY COALESCE(d.name, 'Без отдела'), u.full_name";
                 using (var cmd = new SQLiteCommand(query, connection))
                 using (var reader = cmd.ExecuteReader())
                 {
@@ -856,7 +856,7 @@ namespace Messenger.Server
                             DepartmentId = reader.IsDBNull(4) ? (int?)null : reader.GetInt32(4),
                             Position = reader.IsDBNull(5) ? null : reader.GetString(5),
                             IsAdmin = !reader.IsDBNull(6) && reader.GetInt32(6) == 1,
-                            Department = reader.GetString(7),
+                            Department = reader.IsDBNull(7) ? null : reader.GetString(7),
                             IsOnline = !reader.IsDBNull(8) && reader.GetBoolean(8),
                             LastSeen = reader.IsDBNull(9) ? (DateTime?)null : reader.GetDateTime(9)
                         });

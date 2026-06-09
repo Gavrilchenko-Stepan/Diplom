@@ -269,9 +269,25 @@ namespace Messenger.Server
         private void HandleGetAvailableUsers(NetworkPacket packet)
         {
             if (User == null) return;
-            var jsonElement = (JsonElement)packet.Data;
-            int uid = jsonElement.GetInt32(); // получаем число напрямую
+
+            int uid;
+            try
+            {
+                // Безопасное извлечение int из JsonElement или обычного объекта
+                if (packet.Data is JsonElement elem && elem.ValueKind == JsonValueKind.Number)
+                    uid = elem.GetInt32();
+                else
+                    uid = Convert.ToInt32(packet.Data);
+            }
+            catch (Exception ex)
+            {
+                server.Log($"Ошибка получения uid в GetAvailableUsers: {ex.Message}");
+                return;
+            }
+
+            server.Log($"HandleGetAvailableUsers: запрос от пользователя {User.Id} для uid={uid}");
             var users = db.GetAvailableUsersForChat(uid);
+            server.Log($"HandleGetAvailableUsers: отправляю {users.Count} пользователей");
             SendPacket(new NetworkPacket { Command = CommandType.AvailableUsersList, Data = users });
         }
 

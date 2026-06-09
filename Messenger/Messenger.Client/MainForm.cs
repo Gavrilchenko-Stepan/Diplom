@@ -52,9 +52,19 @@ namespace Messenger.Client
         private const string INI_SECTION = "MainForm";
         private const string KEY_LAST_CHAT = "LastChatId";
 
+        private System.Windows.Forms.Panel welcomePanel;
+        private System.Windows.Forms.Label lblWelcomeTitle;
+        private System.Windows.Forms.Label lblWelcomeMessage;
+
         public MainForm()
         {
             InitializeComponent();
+
+            this.Shown += (s, e) => {
+                panelRight.PerformLayout();
+                if (welcomePanel != null) welcomePanel.PerformLayout();
+                if (welcomePanel != null) welcomePanel.Invalidate();
+            };
 
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
@@ -196,8 +206,7 @@ namespace Messenger.Client
             lblClearSearch.MouseEnter += (sender, e) => lblClearSearch.ForeColor = Color.White;
             lblClearSearch.MouseLeave += (sender, e) => lblClearSearch.ForeColor = Color.Gray;
 
-            this.welcomePanel.Visible = true;
-            this.chatContainer.Visible = false;
+            CreateWelcomePanel();
 
             var contextMenu = new ContextMenuStrip();
             var leaveChatMenuItem = new ToolStripMenuItem("🚪 Покинуть чат");
@@ -1862,13 +1871,22 @@ namespace Messenger.Client
         {
             if (showChat && currentChat != null)
             {
-                if (chatContainer != null) chatContainer.Visible = true;
+                if (chatContainer != null)
+                {
+                    chatContainer.Visible = true;
+                    chatContainer.BringToFront();
+                }
                 if (welcomePanel != null) welcomePanel.Visible = false;
             }
             else
             {
                 if (chatContainer != null) chatContainer.Visible = false;
-                if (welcomePanel != null) welcomePanel.Visible = true;
+                if (welcomePanel != null)
+                {
+                    welcomePanel.Visible = true;
+                    welcomePanel.Dock = DockStyle.Fill;
+                    welcomePanel.BringToFront();
+                }
                 currentChat = null;
                 lblChatName.Text = "Выберите чат";
                 lstMessages.Items.Clear();
@@ -1931,6 +1949,48 @@ namespace Messenger.Client
             {
                 MessageBox.Show("Выберите чат в списке.");
             }
+        }
+
+        private void CreateWelcomePanel()
+        {
+            welcomePanel = new Panel();
+            welcomePanel.BackColor = Color.FromArgb(30, 30, 46);
+            welcomePanel.Dock = DockStyle.Fill;
+            welcomePanel.Visible = true;
+
+            lblWelcomeTitle = new Label();
+            lblWelcomeTitle.Font = new Font("Segoe UI", 24F, FontStyle.Bold);
+            lblWelcomeTitle.ForeColor = Color.FromArgb(0, 229, 255);
+            lblWelcomeTitle.Text = "Добро пожаловать!";
+            lblWelcomeTitle.Dock = DockStyle.Top;
+            lblWelcomeTitle.Height = 100;
+            lblWelcomeTitle.TextAlign = ContentAlignment.MiddleCenter;
+
+            lblWelcomeMessage = new Label();
+            lblWelcomeMessage.Font = new Font("Segoe UI", 12F);
+            lblWelcomeMessage.ForeColor = Color.White;
+            lblWelcomeMessage.Text =
+                "Выберите чат из списка слева, чтобы начать общение.\n\n" +
+                "• Создавайте новые чаты с сотрудниками\n" +
+                "• Участвуйте в групповых обсуждениях\n" +
+                "• Просматривайте историю сообщений\n" +
+                "• Редактируйте и удаляйте свои сообщения\n" +
+                "• Администраторы могут управлять пользователями и чатами";
+            lblWelcomeMessage.Dock = DockStyle.Fill;
+            lblWelcomeMessage.Padding = new Padding(30);
+            lblWelcomeMessage.TextAlign = ContentAlignment.MiddleCenter;
+
+            welcomePanel.Controls.Add(lblWelcomeTitle);
+            welcomePanel.Controls.Add(lblWelcomeMessage);
+
+            // Добавляем в panelRight
+            panelRight.Controls.Add(welcomePanel);
+            // Поднимаем welcomePanel на передний план (Z-порядок)
+            welcomePanel.BringToFront();
+
+            // Изначально показываем приветствие, чат скрыт
+            chatContainer.Visible = false;
+            welcomePanel.Visible = true;
         }
     }
 }
