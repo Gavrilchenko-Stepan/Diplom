@@ -17,8 +17,8 @@ namespace Messenger.Client
 {
     public partial class MainForm : Form
     {
-        private User currentUser;
-        private NetworkClient networkClient;
+        private User currentUser = null;
+        private NetworkClient networkClient = null;
         private List<Chat> chats = new List<Chat>();
         private Chat currentChat;
         private Dictionary<int, List<Shared.Message>> messages = new Dictionary<int, List<Shared.Message>>();
@@ -52,19 +52,9 @@ namespace Messenger.Client
         private const string INI_SECTION = "MainForm";
         private const string KEY_LAST_CHAT = "LastChatId";
 
-        private System.Windows.Forms.Panel welcomePanel;
-        private System.Windows.Forms.Label lblWelcomeTitle;
-        private System.Windows.Forms.Label lblWelcomeMessage;
-
         public MainForm()
         {
             InitializeComponent();
-
-            this.Shown += (s, e) => {
-                panelRight.PerformLayout();
-                if (welcomePanel != null) welcomePanel.PerformLayout();
-                if (welcomePanel != null) welcomePanel.Invalidate();
-            };
 
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
@@ -206,8 +196,6 @@ namespace Messenger.Client
             lblClearSearch.MouseEnter += (sender, e) => lblClearSearch.ForeColor = Color.White;
             lblClearSearch.MouseLeave += (sender, e) => lblClearSearch.ForeColor = Color.Gray;
 
-            CreateWelcomePanel();
-
             var contextMenu = new ContextMenuStrip();
             var leaveChatMenuItem = new ToolStripMenuItem("🚪 Покинуть чат");
             leaveChatMenuItem.Click += LeaveChatMenuItem_Click;
@@ -222,6 +210,8 @@ namespace Messenger.Client
                     leaveChatMenuItem.Enabled = !(chat.Type == ChatType.Department && !currentUser.IsAdmin);
                 }
             };
+
+            ShowChat(false);
         }
 
         private void UpdateFormRegion()
@@ -473,7 +463,7 @@ namespace Messenger.Client
                             lblChatName.Text = "Выберите чат";
                             lstMessages.Items.Clear();
                             btnSend.Enabled = false;
-                            ShowChatPanel(false);
+                            ShowChat(false);
                         }
 
                         if (currentChat != null)
@@ -494,11 +484,11 @@ namespace Messenger.Client
                             if (lastChat != null)
                                 lstChats.SelectedItem = lastChat;
                             else
-                                ShowChatPanel(false);
+                                ShowChat(false);
                         }
                         else
                         {
-                            ShowChatPanel(false);
+                            ShowChat(false);
                         }
                         break;
 
@@ -725,7 +715,7 @@ namespace Messenger.Client
             currentChat = chat;
 
             SaveLastChat();
-            ShowChatPanel(true);
+            ShowChat(true);
 
             chat.UnreadCount = 0;
             UpdateChatsList();
@@ -1867,38 +1857,11 @@ namespace Messenger.Client
             return true;
         }
 
-        private void ShowChatPanel(bool showChat)
-        {
-            if (showChat && currentChat != null)
-            {
-                if (chatContainer != null)
-                {
-                    chatContainer.Visible = true;
-                    chatContainer.BringToFront();
-                }
-                if (welcomePanel != null) welcomePanel.Visible = false;
-            }
-            else
-            {
-                if (chatContainer != null) chatContainer.Visible = false;
-                if (welcomePanel != null)
-                {
-                    welcomePanel.Visible = true;
-                    welcomePanel.Dock = DockStyle.Fill;
-                    welcomePanel.BringToFront();
-                }
-                currentChat = null;
-                lblChatName.Text = "Выберите чат";
-                lstMessages.Items.Clear();
-                btnSend.Enabled = false;
-            }
-        }
-
         private void HideCurrentChat(object sender, EventArgs e)
         {
             if (currentChat != null)
             {
-                ShowChatPanel(false);
+                ShowChat(false);
                 // Сбрасываем сохранённый ID последнего чата
                 ini.Write(INI_SECTION, KEY_LAST_CHAT, "0");
             }
@@ -1951,46 +1914,27 @@ namespace Messenger.Client
             }
         }
 
-        private void CreateWelcomePanel()
+        private void ShowChat(bool showChat)
         {
-            welcomePanel = new Panel();
-            welcomePanel.BackColor = Color.FromArgb(30, 30, 46);
-            welcomePanel.Dock = DockStyle.Fill;
-            welcomePanel.Visible = true;
-
-            lblWelcomeTitle = new Label();
-            lblWelcomeTitle.Font = new Font("Segoe UI", 24F, FontStyle.Bold);
-            lblWelcomeTitle.ForeColor = Color.FromArgb(0, 229, 255);
-            lblWelcomeTitle.Text = "Добро пожаловать!";
-            lblWelcomeTitle.Dock = DockStyle.Top;
-            lblWelcomeTitle.Height = 100;
-            lblWelcomeTitle.TextAlign = ContentAlignment.MiddleCenter;
-
-            lblWelcomeMessage = new Label();
-            lblWelcomeMessage.Font = new Font("Segoe UI", 12F);
-            lblWelcomeMessage.ForeColor = Color.White;
-            lblWelcomeMessage.Text =
-                "Выберите чат из списка слева, чтобы начать общение.\n\n" +
-                "• Создавайте новые чаты с сотрудниками\n" +
-                "• Участвуйте в групповых обсуждениях\n" +
-                "• Просматривайте историю сообщений\n" +
-                "• Редактируйте и удаляйте свои сообщения\n" +
-                "• Администраторы могут управлять пользователями и чатами";
-            lblWelcomeMessage.Dock = DockStyle.Fill;
-            lblWelcomeMessage.Padding = new Padding(30);
-            lblWelcomeMessage.TextAlign = ContentAlignment.MiddleCenter;
-
-            welcomePanel.Controls.Add(lblWelcomeTitle);
-            welcomePanel.Controls.Add(lblWelcomeMessage);
-
-            // Добавляем в panelRight
-            panelRight.Controls.Add(welcomePanel);
-            // Поднимаем welcomePanel на передний план (Z-порядок)
-            welcomePanel.BringToFront();
-
-            // Изначально показываем приветствие, чат скрыт
-            chatContainer.Visible = false;
-            welcomePanel.Visible = true;
+            if (showChat && currentChat != null)
+            {
+                panelChatHeader.Visible = true;
+                lstMessages.Visible = true;
+                panelMessageInput.Visible = true;
+                lblWelcomePlaceholder.Visible = false;
+            }
+            else
+            {
+                panelChatHeader.Visible = false;
+                lstMessages.Visible = false;
+                panelMessageInput.Visible = false;
+                lblWelcomePlaceholder.Visible = true;
+                currentChat = null;
+                lblChatName.Text = "Выберите чат";
+                lstMessages.Items.Clear();
+                btnSend.Enabled = false;
+            }
+            panelRight.PerformLayout();
         }
     }
 }

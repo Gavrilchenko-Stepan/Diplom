@@ -179,19 +179,36 @@ namespace Messenger.Server
             {
                 if ((long)new SQLiteCommand("SELECT COUNT(*) FROM users", connection).ExecuteScalar() == 0)
                 {
-                    new SQLiteCommand("INSERT INTO departments (name) VALUES ('ИТ отдел')", connection).ExecuteNonQuery();
-                    long deptId = (long)new SQLiteCommand("SELECT id FROM departments WHERE name='ИТ отдел'", connection).ExecuteScalar();
+                    string deptName = "Информационно-вычислительный центр";
+                    long deptId;
 
-                    using (var cmd = new SQLiteCommand("INSERT INTO users (username, password, full_name, department_id, is_admin) VALUES (@u, @p, @f, @d, @a)", connection))
+                    var checkDept = new SQLiteCommand("SELECT id FROM departments WHERE name = @name", connection);
+                    checkDept.Parameters.AddWithValue("@name", deptName);
+                    var existing = checkDept.ExecuteScalar();
+                    if (existing != null && existing != DBNull.Value)
+                    {
+                        deptId = Convert.ToInt64(existing);
+                    }
+                    else
+                    {
+                        new SQLiteCommand($"INSERT INTO departments (name) VALUES ('{deptName}')", connection).ExecuteNonQuery();
+                        deptId = (long)new SQLiteCommand($"SELECT id FROM departments WHERE name='{deptName}'", connection).ExecuteScalar();
+                    }
+
+                    using (var cmd = new SQLiteCommand(
+                        "INSERT INTO users (username, password, full_name, department_id, position, is_admin) VALUES (@u, @p, @f, @d, @pos, @a)",
+                        connection))
                     {
                         cmd.Parameters.AddWithValue("@u", "admin");
                         cmd.Parameters.AddWithValue("@p", "admin");
                         cmd.Parameters.AddWithValue("@f", "Главный администратор");
                         cmd.Parameters.AddWithValue("@d", deptId);
-                        cmd.Parameters.AddWithValue("@a", 1); // admin
+                        cmd.Parameters.AddWithValue("@pos", "Главный администратор");
+                        cmd.Parameters.AddWithValue("@a", 1);
                         cmd.ExecuteNonQuery();
                     }
-                    Console.WriteLine("Создан пользователь admin/admin для первого входа (администратор).");
+
+                    Console.WriteLine("Создан пользователь admin/admin (Главный администратор) в отделе 'Информационно-вычислительный центр'.");
                 }
             }
         }
@@ -537,13 +554,13 @@ namespace Messenger.Server
         {
             lock (dbLock)
             {
-                // Check if already exists
-                string check = @"
+                // 1. Проверяем, существует ли уже чат, где оба пользователя являются участниками
+                string checkBoth = @"
                     SELECT c.id FROM chats c
                     JOIN chat_participants cp1 ON c.id = cp1.chat_id
                     JOIN chat_participants cp2 ON c.id = cp2.chat_id
                     WHERE c.type='Private' AND cp1.user_id=@u1 AND cp2.user_id=@u2 AND cp1.user_id!=cp2.user_id";
-                using (var cmd = new SQLiteCommand(check, connection))
+                using (var cmd = new SQLiteCommand(checkBoth, connection))
                 {
                     cmd.Parameters.AddWithValue("@u1", user1Id);
                     cmd.Parameters.AddWithValue("@u2", user2Id);
@@ -555,6 +572,46 @@ namespace Messenger.Server
                     }
                 }
 
+                // 2. Ищем чат, где user2 является участником, а user1 НЕ является участником
+                //    (пользователь user1 вышел из чата, а user2 остался)
+                string findLeftChat = @"
+                    SELECT c.id FROM chats c
+                    JOIN chat_participants cp ON c.id = cp.chat_id
+                    WHERE c.type='Private' 
+                     AND cp.user_id = @user2Id
+                     AND NOT EXISTS (SELECT 1 FROM chat_participants WHERE chat_id = c.id AND user_id = @user1Id)
+                    LIMIT 1";
+                using (var cmd = new SQLiteCommand(findLeftChat, connection))
+                {
+                    cmd.Parameters.AddWithValue("@user1Id", user1Id);
+                    cmd.Parameters.AddWithValue("@user2Id", user2Id);
+                    var existingChatIdObj = cmd.ExecuteScalar();
+                    if (existingChatIdObj != null)
+                    {
+                        int chatId = Convert.ToInt32(existingChatIdObj);
+                        // Добавляем user1 обратно в участники
+                        AddUserToChat(chatId, user1Id);
+                        return new Chat { Id = chatId, Type = ChatType.Private, Participants = GetChatParticipants(chatId) };
+                    }
+                }
+
+                // 3. Аналогично, ищем чат, где user1 является участником, а user2 НЕ является
+                //    (пользователь user2 вышел, а user1 остался)
+                using (var cmd = new SQLiteCommand(findLeftChat, connection))
+                {
+                    cmd.Parameters.Clear();
+                    cmd.Parameters.AddWithValue("@user1Id", user2Id);
+                    cmd.Parameters.AddWithValue("@user2Id", user1Id);
+                    var existingChatIdObj = cmd.ExecuteScalar();
+                    if (existingChatIdObj != null)
+                    {
+                        int chatId = Convert.ToInt32(existingChatIdObj);
+                        AddUserToChat(chatId, user2Id);
+                        return new Chat { Id = chatId, Type = ChatType.Private, Participants = GetChatParticipants(chatId) };
+                    }
+                }
+
+                // 4. Если ничего не найдено, создаём новый чат
                 string insert = "INSERT INTO chats (name, type, created_by) VALUES (@name, 'Private', @by); SELECT last_insert_rowid();";
                 string name = $"private_{user1Id}_{user2Id}";
                 int newId;
