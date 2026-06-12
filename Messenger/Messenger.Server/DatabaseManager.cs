@@ -264,12 +264,12 @@ namespace Messenger.Server
                                 {
                                     Id = reader.GetInt32(0),
                                     Username = reader.GetString(1),
-                                    Password = reader.GetString(2), // здесь может остаться старый plain, но это неважно
+                                    Password = reader.GetString(2),
                                     FullName = reader.GetString(3),
                                     DepartmentId = reader.IsDBNull(4) ? (int?)null : reader.GetInt32(4),
                                     Position = reader.IsDBNull(5) ? null : reader.GetString(5),
                                     IsAdmin = !reader.IsDBNull(6) && reader.GetInt32(6) == 1,
-                                    Department = reader.GetString(7),
+                                    Department = reader.IsDBNull(7) ? null : reader.GetString(7),
                                     IsOnline = false
                                 };
                             }
@@ -346,7 +346,7 @@ namespace Messenger.Server
             var depts = new List<Department>();
             lock (dbLock)
             {
-                string query = "SELECT id, name, description FROM departments ORDER BY name";
+                string query = "SELECT id, name, description, chat_id FROM departments ORDER BY name";
                 using (var cmd = new SQLiteCommand(query, connection))
                 using (var reader = cmd.ExecuteReader())
                 {
@@ -356,7 +356,8 @@ namespace Messenger.Server
                         {
                             Id = reader.GetInt32(0),
                             Name = reader.GetString(1),
-                            Description = reader.IsDBNull(2) ? null : reader.GetString(2)
+                            Description = reader.IsDBNull(2) ? null : reader.GetString(2),
+                            ChatId = reader.IsDBNull(3) ? (int?)null : reader.GetInt32(3)
                         });
                     }
                 }

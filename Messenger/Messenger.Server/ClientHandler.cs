@@ -134,10 +134,6 @@ namespace Messenger.Server
                     case CommandType.TypingStatus:
                         HandleTypingStatus(packet);
                         break;
-
-                    case CommandType.GetAllDepartments:
-                        HandleGetAllDepartments();
-                        break;
                     case CommandType.AddDepartment:
                         HandleAddDepartment(packet);
                         break;
@@ -726,13 +722,6 @@ namespace Messenger.Server
                 Command = CommandType.TypingStatus,
                 Data = new { chatId, userId, isTyping }
             }, userId);
-        }
-
-        private void HandleGetAllDepartments()
-        {
-            if (User == null || !User.IsAdmin) return;
-            var depts = db.GetAllDepartments();
-            SendPacket(new NetworkPacket { Command = CommandType.DepartmentsList, Data = depts });
         }
 
         private void HandleAddDepartment(NetworkPacket packet)

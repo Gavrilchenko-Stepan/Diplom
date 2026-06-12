@@ -874,7 +874,7 @@ namespace Messenger.Client
 
         private void BtnRefreshDepartments_Click(object sender, EventArgs e)
         {
-            networkClient.SendPacket(new NetworkPacket { Command = CommandType.GetAllDepartments });
+            networkClient.SendPacket(new NetworkPacket { Command = Shared.CommandType.GetDepartments });
         }
 
         private void BtnCreateDeptChat_Click(object sender, EventArgs e)

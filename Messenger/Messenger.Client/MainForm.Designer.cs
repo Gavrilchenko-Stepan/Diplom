@@ -433,7 +433,7 @@ namespace Messenger.Client
             this.lblChatName.ForeColor = System.Drawing.Color.White;
             this.lblChatName.Location = new System.Drawing.Point(75, 8);
             this.lblChatName.Name = "lblChatName";
-            this.lblChatName.Size = new System.Drawing.Size(573, 25);
+            this.lblChatName.Size = new System.Drawing.Size(564, 25);
             this.lblChatName.TabIndex = 1;
             this.lblChatName.Text = "Выберите чат";
             // 
@@ -445,7 +445,7 @@ namespace Messenger.Client
             this.btnViewParticipants.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnViewParticipants.Font = new System.Drawing.Font("Segoe UI", 9F);
             this.btnViewParticipants.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
-            this.btnViewParticipants.Location = new System.Drawing.Point(709, 19);
+            this.btnViewParticipants.Location = new System.Drawing.Point(679, -183);
             this.btnViewParticipants.Name = "btnViewParticipants";
             this.btnViewParticipants.Size = new System.Drawing.Size(100, 30);
             this.btnViewParticipants.TabIndex = 5;
@@ -469,7 +469,7 @@ namespace Messenger.Client
             this.btnHideChat.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnHideChat.Font = new System.Drawing.Font("Segoe UI", 10F);
             this.btnHideChat.ForeColor = System.Drawing.Color.White;
-            this.btnHideChat.Location = new System.Drawing.Point(780, 15);
+            this.btnHideChat.Location = new System.Drawing.Point(795, 3);
             this.btnHideChat.Name = "btnHideChat";
             this.btnHideChat.Size = new System.Drawing.Size(30, 30);
             this.btnHideChat.TabIndex = 7;
@@ -481,14 +481,13 @@ namespace Messenger.Client
             // 
             this.lstMessages.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(46)))));
             this.lstMessages.BorderStyle = System.Windows.Forms.BorderStyle.None;
-            this.lstMessages.Dock = System.Windows.Forms.DockStyle.Fill;
             this.lstMessages.DrawMode = System.Windows.Forms.DrawMode.OwnerDrawVariable;
             this.lstMessages.ForeColor = System.Drawing.Color.White;
             this.lstMessages.IntegralHeight = false;
-            this.lstMessages.Location = new System.Drawing.Point(10, 10);
+            this.lstMessages.Location = new System.Drawing.Point(10, 79);
             this.lstMessages.Name = "lstMessages";
             this.lstMessages.SelectionMode = System.Windows.Forms.SelectionMode.None;
-            this.lstMessages.Size = new System.Drawing.Size(830, 475);
+            this.lstMessages.Size = new System.Drawing.Size(830, 406);
             this.lstMessages.TabIndex = 1;
             this.lstMessages.Visible = false;
             // 

@@ -36,7 +36,6 @@ namespace Messenger.Server
                 {
                     UpdateChatParticipantsCache(chat.Id);
                 }
-                db.CreateDepartmentChatsForAllDepartments();
 
                 int port = 8888;
                 tcpListener = new TcpListener(IPAddress.Any, port);

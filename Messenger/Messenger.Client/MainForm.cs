@@ -51,6 +51,7 @@ namespace Messenger.Client
         private IniFile ini;
         private const string INI_SECTION = "MainForm";
         private const string KEY_LAST_CHAT = "LastChatId";
+        private ToolTip chatToolTip;
 
         public MainForm()
         {
@@ -212,6 +213,11 @@ namespace Messenger.Client
             };
 
             ShowChat(false);
+
+            chatToolTip = new ToolTip();
+            chatToolTip.InitialDelay = 1000;
+            lstChats.MouseMove += LstChats_MouseMoveForToolTip;
+            lstChats.MouseLeave += (s, e) => chatToolTip.SetToolTip(lstChats, null);
         }
 
         private void UpdateFormRegion()
@@ -1080,16 +1086,21 @@ namespace Messenger.Client
 
             // Название чата
             using (var font = new Font("Segoe UI", 11, FontStyle.Bold))
-                e.Graphics.DrawString(chat.Name, font, Brushes.White, x, yTitle);
+            {
+                int rightMargin = 60;
+                int titleWidth = e.Bounds.Width - x - rightMargin;
+                if (titleWidth < 50) titleWidth = 50;
+                Rectangle titleRect = new Rectangle(x, yTitle, titleWidth, 30);
+                TextRenderer.DrawText(e.Graphics, chat.Name, font, titleRect, Color.White, TextFormatFlags.EndEllipsis);
+            }
 
             // Последнее сообщение
             if (!string.IsNullOrEmpty(chat.LastMessage))
             {
-                string last = chat.LastMessage.Length > 35 ? chat.LastMessage.Substring(0, 32) + "..." : chat.LastMessage;
                 using (var font = new Font("Segoe UI", 9))
-                using (var brush = new SolidBrush(Color.FromArgb(180, 180, 200))) // светло-серый
                 {
-                    e.Graphics.DrawString(last, font, brush, x, yMessage);
+                    Rectangle msgRect = new Rectangle(x, yMessage, e.Bounds.Width - x - 20, 30);
+                    TextRenderer.DrawText(e.Graphics, chat.LastMessage, font, msgRect, Color.FromArgb(180, 180, 200), TextFormatFlags.EndEllipsis);
                 }
             }
 
@@ -1935,6 +1946,33 @@ namespace Messenger.Client
                 btnSend.Enabled = false;
             }
             panelRight.PerformLayout();
+        }
+
+        private void LstChats_MouseMoveForToolTip(object sender, MouseEventArgs e)
+        {
+            int index = lstChats.IndexFromPoint(e.Location);
+            if (index >= 0 && index < lstChats.Items.Count && lstChats.Items[index] is Chat chat)
+            {
+                Rectangle itemBounds = lstChats.GetItemRectangle(index);
+                int x = itemBounds.X + 68;
+                int yTitle = itemBounds.Y + 15;
+                int maxWidth = itemBounds.Width - x - 20;
+
+                using (var g = lstChats.CreateGraphics())
+                using (var font = new Font("Segoe UI", 11, FontStyle.Bold))
+                {
+                    SizeF textSize = g.MeasureString(chat.Name, font);
+                    int textWidth = (int)Math.Ceiling(textSize.Width);
+                    if (textWidth > maxWidth) textWidth = maxWidth;
+                    Rectangle textRect = new Rectangle(x, yTitle, textWidth, 30);
+                    if (textRect.Contains(e.Location))
+                    {
+                        chatToolTip.SetToolTip(lstChats, chat.Name);
+                        return;
+                    }
+                }
+            }
+            chatToolTip.SetToolTip(lstChats, null);
         }
     }
 }
