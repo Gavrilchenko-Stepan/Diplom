@@ -1235,7 +1235,21 @@ namespace Messenger.Server
                         existingChatId = Convert.ToInt32(res);
                 }
                 if (existingChatId.HasValue)
-                    return GetChatById(existingChatId.Value);
+                {
+                    var existingChat = GetChatById(existingChatId.Value);
+                    if (existingChat != null)
+                        return existingChat;
+                    else
+                    {
+                        // Ссылка на несуществующий чат – сбрасываем chat_id
+                        string resetDept = "UPDATE departments SET chat_id = NULL WHERE id = @deptId";
+                        using (var cmd = new SQLiteCommand(resetDept, connection))
+                        {
+                            cmd.Parameters.AddWithValue("@deptId", departmentId);
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                }
 
                 // Создать чат
                 string deptName = GetDepartmentName(departmentId);

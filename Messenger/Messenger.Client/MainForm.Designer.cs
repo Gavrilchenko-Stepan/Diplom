@@ -433,7 +433,7 @@ namespace Messenger.Client
             this.lblChatName.ForeColor = System.Drawing.Color.White;
             this.lblChatName.Location = new System.Drawing.Point(75, 8);
             this.lblChatName.Name = "lblChatName";
-            this.lblChatName.Size = new System.Drawing.Size(564, 25);
+            this.lblChatName.Size = new System.Drawing.Size(595, 25);
             this.lblChatName.TabIndex = 1;
             this.lblChatName.Text = "Выберите чат";
             // 
@@ -445,7 +445,7 @@ namespace Messenger.Client
             this.btnViewParticipants.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnViewParticipants.Font = new System.Drawing.Font("Segoe UI", 9F);
             this.btnViewParticipants.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(0)))), ((int)(((byte)(229)))), ((int)(((byte)(255)))));
-            this.btnViewParticipants.Location = new System.Drawing.Point(679, -183);
+            this.btnViewParticipants.Location = new System.Drawing.Point(689, 19);
             this.btnViewParticipants.Name = "btnViewParticipants";
             this.btnViewParticipants.Size = new System.Drawing.Size(100, 30);
             this.btnViewParticipants.TabIndex = 5;

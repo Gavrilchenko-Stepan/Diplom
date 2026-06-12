@@ -378,12 +378,7 @@ namespace Messenger.Client
             Bitmap bmp = new Bitmap(48, 48);
             using (Graphics g = Graphics.FromImage(bmp))
             {
-                g.Clear(Color.FromArgb(63, 81, 181));
-                using (Font font = new Font("Segoe UI", 18, FontStyle.Bold))
-                using (StringFormat sf = new StringFormat() { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
-                {
-                    g.DrawString(initials, font, Brushes.White, new Rectangle(0, 0, 48, 48), sf);
-                }
+                UIHelper.DrawAvatar(g, new Rectangle(0, 0, 48, 48), initials);
             }
             picUserAvatar.Image?.Dispose();
             picUserAvatar.Image = bmp;
@@ -741,39 +736,22 @@ namespace Messenger.Client
             }
 
             int size = 50;
+            string avatarText = "?";
+            if (currentChat.Type == ChatType.Private && currentChat.Participants != null)
+            {
+                var other = currentChat.Participants.FirstOrDefault(p => p.Id != currentUser.Id);
+                if (other != null) avatarText = GetInitials(other.FullName);
+            }
+            else if (!string.IsNullOrWhiteSpace(currentChat.Name))
+            {
+                avatarText = currentChat.Name[0].ToString().ToUpper();
+            }
             Bitmap bmp = new Bitmap(size, size);
             using (Graphics g = Graphics.FromImage(bmp))
             {
-                g.SmoothingMode = SmoothingMode.AntiAlias;
-                g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
-                g.Clear(Color.FromArgb(63, 81, 181));
-
-                string text = "?";
-                if (currentChat.Type == ChatType.Private && currentChat.Participants != null)
-                {
-                    var other = currentChat.Participants.FirstOrDefault(p => p.Id != currentUser.Id);
-                    if (other != null && !string.IsNullOrWhiteSpace(other.FullName))
-                    {
-                        var parts = other.FullName.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                        if (parts.Length == 1)
-                            text = parts[0][0].ToString().ToUpper();
-                        else if (parts.Length >= 2)
-                            text = (parts[0][0].ToString() + parts[parts.Length - 1][0].ToString()).ToUpper();
-                    }
-                }
-                else if (!string.IsNullOrWhiteSpace(currentChat.Name))
-                {
-                    text = currentChat.Name[0].ToString().ToUpper();
-                }
-
-                using (Font font = new Font("Segoe UI", 20, FontStyle.Bold))
-                {
-                    SizeF textSize = g.MeasureString(text, font);
-                    float x = (size - textSize.Width) / 2;
-                    float y = (size - textSize.Height) / 2;
-                    g.DrawString(text, font, Brushes.White, x, y);
-                }
+                UIHelper.DrawAvatar(g, new Rectangle(0, 0, size, size), avatarText);
             }
+            picChatAvatar.Image?.Dispose();
             picChatAvatar.Image = bmp;
         }
 
@@ -1050,23 +1028,13 @@ namespace Messenger.Client
 
             // Аватар (круг)
             Rectangle avatarRect = new Rectangle(e.Bounds.X + 12, e.Bounds.Y + 12, 42, 42);
-            using (var path = new GraphicsPath())
-            {
-                path.AddEllipse(avatarRect);
-                using (var brush = new SolidBrush(Color.FromArgb(63, 81, 181)))
-                    e.Graphics.FillPath(brush, path);
-            }
-
-            // Текст аватара: первая буква названия чата
             string avatarText = chat.Name.Length > 0 ? chat.Name[0].ToString().ToUpper() : "?";
             if (chat.Type == ChatType.Private && chat.Participants != null)
             {
                 var other = chat.Participants.FirstOrDefault(p => p.Id != currentUser?.Id);
                 if (other != null) avatarText = GetInitials(other.FullName);
             }
-            using (var font = new Font("Segoe UI", 16, FontStyle.Bold))
-            using (var sf = new StringFormat() { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
-                e.Graphics.DrawString(avatarText, font, Brushes.White, avatarRect, sf);
+            UIHelper.DrawAvatar(e.Graphics, avatarRect, avatarText);
 
             // Статус онлайн для личных чатов (зелёная точка)
             if (chat.Type == ChatType.Private && chat.Participants != null)
@@ -1189,16 +1157,8 @@ namespace Messenger.Client
             if (needAvatar)
             {
                 Rectangle avatarRect = new Rectangle(bubbleRect.Left - avatarSize - 10, e.Bounds.Y + 5, avatarSize, avatarSize);
-                using (var path = new GraphicsPath())
-                {
-                    path.AddEllipse(avatarRect);
-                    using (var brush = new SolidBrush(Color.FromArgb(63, 81, 181)))
-                        e.Graphics.FillPath(brush, path);
-                }
                 string initials = GetInitials(msg.SenderName);
-                using (var font = new Font("Segoe UI", 12, FontStyle.Bold))
-                using (var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
-                    e.Graphics.DrawString(initials, font, Brushes.White, avatarRect, sf);
+                UIHelper.DrawAvatar(e.Graphics, avatarRect, initials);
             }
 
             int currentY = e.Bounds.Y + (IsFirstInSeries(e.Index) ? 5 : 2);

@@ -169,7 +169,14 @@ namespace Messenger.Client
                         MessageBox.Show(packet.Data.ToString(), "Сообщение", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         break;
                     case Shared.CommandType.ChatDeleted:
-                        LoadData();
+                        int deletedId = ((JsonElement)packet.Data).GetInt32();
+                        allChats?.RemoveAll(c => c.Id == deletedId);
+                        allChatsList?.RemoveAll(c => c.Id == deletedId);
+                        UpdateChatsTree();
+                        cmbChat.DataSource = null;
+                        cmbChat.DataSource = allChats;
+                        cmbChat.DisplayMember = "Name";
+                        cmbChat.ValueMember = "Id";
                         break;
                     case Shared.CommandType.ChatInfo:
                         var jsonChatInfo = ((JsonElement)packet.Data).GetRawText();
@@ -180,6 +187,22 @@ namespace Messenger.Client
                             tvChats.SelectedNode.Tag = fullChat;
                             UpdateChatActionButtons(fullChat);
                         }
+                        break;
+                    case Shared.CommandType.ChatCreated:
+                        var jsonNewChat = ((JsonElement)packet.Data).GetRawText();
+                        var newChat = JsonSerializer.Deserialize<Chat>(jsonNewChat);
+                        if (allChatsList == null) allChatsList = new List<Chat>();
+                        if (!allChatsList.Any(c => c.Id == newChat.Id))
+                        {
+                            allChatsList.Add(newChat);
+                            UpdateChatsTree();
+                            cmbChat.DataSource = null;
+                            cmbChat.DataSource = allChatsList;
+                            cmbChat.DisplayMember = "Name";
+                            cmbChat.ValueMember = "Id";
+                        }
+                        // обновить таблицу отделов (галочка «Чат создан»)
+                        networkClient.SendPacket(new NetworkPacket { Command = Shared.CommandType.GetDepartments });
                         break;
                 }
             }
@@ -467,16 +490,8 @@ namespace Messenger.Client
             if (needAvatar)
             {
                 Rectangle avatarRect = new Rectangle(leftMargin, e.Bounds.Y + 5, avatarSize, avatarSize);
-                using (var path = new GraphicsPath())
-                {
-                    path.AddEllipse(avatarRect);
-                    using (var brush = new SolidBrush(Color.FromArgb(63, 81, 181)))
-                        e.Graphics.FillPath(brush, path);
-                }
                 string initials = GetInitials(msg.UserName);
-                using (var font = new Font("Segoe UI", 12, FontStyle.Bold))
-                using (var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
-                    e.Graphics.DrawString(initials, font, Brushes.White, avatarRect, sf);
+                UIHelper.DrawAvatar(e.Graphics, avatarRect, initials);
             }
 
             int currentY = e.Bounds.Y + (IsFirstInSeries(e.Index) ? 5 : 2);
@@ -907,7 +922,6 @@ namespace Messenger.Client
                 Command = CommandType.CreateDepartmentChat,
                 Data = dept.Id
             });
-            LoadData();
         }
 
         private void BtnDeleteDeptChat_Click(object sender, EventArgs e)
