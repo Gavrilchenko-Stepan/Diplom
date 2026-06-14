@@ -26,6 +26,7 @@ namespace Messenger.Client
         public event Action<NetworkPacket> OnPacketReceived;
         public event Action OnDisconnected;
         public bool IsConnected => isConnected;
+
         private bool _disconnecting = false;
 
         public async Task<bool> Connect(string serverIP, int port = 8888)
