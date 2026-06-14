@@ -52,6 +52,7 @@ namespace Messenger.Client
         private const string INI_SECTION = "MainForm";
         private const string KEY_LAST_CHAT = "LastChatId";
         private ToolTip chatToolTip;
+        private bool _disconnectedShown = false;
 
         public MainForm()
         {
@@ -637,6 +638,9 @@ namespace Messenger.Client
 
         private void OnDisconnected()
         {
+            if (_disconnectedShown) return;
+            _disconnectedShown = true;
+
             if (InvokeRequired)
             {
                 Invoke(new Action(OnDisconnected));

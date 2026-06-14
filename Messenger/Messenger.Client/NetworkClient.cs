@@ -8,13 +8,15 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Messenger.Shared;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Messenger.Client
 {
     public class NetworkClient
     {
         private TcpClient client;
-        private NetworkStream stream;
+        private SslStream sslStream;
         private StreamReader reader;
         private StreamWriter writer;
         private bool isConnected;
@@ -24,6 +26,7 @@ namespace Messenger.Client
         public event Action<NetworkPacket> OnPacketReceived;
         public event Action OnDisconnected;
         public bool IsConnected => isConnected;
+        private bool _disconnecting = false;
 
         public async Task<bool> Connect(string serverIP, int port = 8888)
         {
@@ -33,19 +36,22 @@ namespace Messenger.Client
                 client = new TcpClient();
                 await client.ConnectAsync(serverIP, port);
 
-                stream = client.GetStream();
-                reader = new StreamReader(stream, Encoding.UTF8);
-                writer = new StreamWriter(stream, Encoding.UTF8) { AutoFlush = true };
+                var networkStream = client.GetStream();
+                sslStream = new SslStream(networkStream, false, (sender, cert, chain, errors) => true);
+                await sslStream.AuthenticateAsClientAsync(serverIP);
+
+                reader = new StreamReader(sslStream, Encoding.UTF8);
+                writer = new StreamWriter(sslStream, Encoding.UTF8) { AutoFlush = true };
 
                 isConnected = true;
                 receiveThread = new Thread(ReceiveLoop);
                 receiveThread.IsBackground = true;
                 receiveThread.Start();
-
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"Ошибка подключения: {ex.Message}");
                 return false;
             }
         }
@@ -56,24 +62,28 @@ namespace Messenger.Client
             {
                 try
                 {
-                    if (stream.DataAvailable)
+                    // SslStream не имеет DataAvailable, поэтому просто читаем строку (блокируется)
+                    // Для синхронного чтения используем reader.ReadLine()
+                    string json = reader.ReadLine();
+                    if (!string.IsNullOrEmpty(json))
                     {
-                        string json = reader.ReadLine();
-                        if (!string.IsNullOrEmpty(json))
-                        {
-                            var packet = JsonSerializer.Deserialize<NetworkPacket>(json);
-                            Console.WriteLine($"Получен JSON: {json}");
-                            OnPacketReceived?.Invoke(packet);
-                        }
+                        Console.WriteLine($"Получен JSON: {json}");
+                        var packet = JsonSerializer.Deserialize<NetworkPacket>(json);
+                        OnPacketReceived?.Invoke(packet);
                     }
-                    Thread.Sleep(50);
                 }
-                catch
+                catch (IOException)
                 {
-                    Disconnect();
+                    // Соединение разорвано
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Ошибка чтения: {ex.Message}");
                     break;
                 }
             }
+            Disconnect();
         }
 
         public void SendPacket(NetworkPacket packet)
@@ -94,6 +104,9 @@ namespace Messenger.Client
 
         public void Disconnect()
         {
+            if (_disconnecting || !isConnected) return;
+            _disconnecting = true;
+
             try
             {
                 if (isConnected)
@@ -103,11 +116,12 @@ namespace Messenger.Client
                 isConnected = false;
                 reader?.Close();
                 writer?.Close();
-                stream?.Close();
+                sslStream?.Close();
                 client?.Close();
             }
             catch { }
             OnDisconnected?.Invoke();
+            _disconnecting = false;
         }
     }
 }

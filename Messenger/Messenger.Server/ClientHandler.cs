@@ -8,6 +8,8 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Messenger.Shared;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Messenger.Server
 {
@@ -16,7 +18,7 @@ namespace Messenger.Server
         private TcpClient client;
         private MessengerServer server;
         private DatabaseManager db;
-        private NetworkStream stream;
+        private SslStream sslStream;
         private StreamReader reader;
         private StreamWriter writer;
         private bool isConnected;
@@ -28,13 +30,26 @@ namespace Messenger.Server
             this.client = client;
             this.server = server;
             this.db = db;
-            stream = client.GetStream();
+            var networkStream = client.GetStream();
 
-            stream.ReadTimeout = 30000;
-            stream.WriteTimeout = 30000;
+            if (!File.Exists("server.pfx"))
+            {
+                server.Log("Сертификат server.pfx не найден!");
+                throw new FileNotFoundException("server.pfx");
+            }
 
-            reader = new StreamReader(stream, Encoding.UTF8);
-            writer = new StreamWriter(stream, Encoding.UTF8) { AutoFlush = true };
+            // Загружаем сертификат (путь к файлу – относительно рабочей папки сервера)
+            X509Certificate2 certificate = new X509Certificate2("server.pfx", "MySecret123");
+
+            // Создаём SslStream поверх NetworkStream
+            sslStream = new SslStream(networkStream, false);
+
+            // Аутентифицируемся как сервер (синхронно, но лучше async, но для простоты оставим sync)
+            sslStream.AuthenticateAsServer(certificate, false, System.Security.Authentication.SslProtocols.Tls12, false);
+
+            // Теперь используем sslStream для чтения/записи
+            reader = new StreamReader(sslStream, Encoding.UTF8);
+            writer = new StreamWriter(sslStream, Encoding.UTF8) { AutoFlush = true };
             isConnected = true;
         }
 
@@ -44,16 +59,13 @@ namespace Messenger.Server
             {
                 while (isConnected && client.Connected)
                 {
-                    if (stream.DataAvailable)
+                    string json = reader.ReadLine();
+                    if (!string.IsNullOrEmpty(json))
                     {
-                        string json = reader.ReadLine();
-                        if (!string.IsNullOrEmpty(json))
-                        {
-                            var packet = JsonSerializer.Deserialize<NetworkPacket>(json);
-                            ProcessPacket(packet);
-                        }
+                        var packet = JsonSerializer.Deserialize<NetworkPacket>(json);
+                        ProcessPacket(packet);
                     }
-                    Thread.Sleep(20);
+                    Thread.Sleep(10);
                 }
             }
             catch (Exception ex)
@@ -363,7 +375,7 @@ namespace Messenger.Server
                 isConnected = false;
                 reader?.Close();
                 writer?.Close();
-                stream?.Close();
+                sslStream?.Close();
                 client?.Close();
                 server.RemoveClient(this);
             }

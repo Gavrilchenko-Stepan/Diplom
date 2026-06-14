@@ -36,6 +36,8 @@ namespace Messenger.Client
 
         private const int avatarSize = 32;
 
+        private bool waitingForHistoryChats = false;
+
         public AdminDashboardForm(NetworkClient client, User user)
         {
             InitializeComponent();
@@ -105,6 +107,7 @@ namespace Messenger.Client
 
             networkClient.SendPacket(new NetworkPacket { Command = Shared.CommandType.GetAllUsers });
             networkClient.SendPacket(new NetworkPacket { Command = Shared.CommandType.GetDepartments });
+            waitingForHistoryChats = true;
             networkClient.SendPacket(new NetworkPacket { Command = Shared.CommandType.GetChatsForHistory });
         }
 
@@ -131,6 +134,11 @@ namespace Messenger.Client
                         DisplayDepartments();
                         break;
                     case Shared.CommandType.ChatsList:
+                        if (!waitingForHistoryChats)
+                        {
+                            break;
+                        }
+                        waitingForHistoryChats = false;
                         var jsonChats = ((JsonElement)packet.Data).GetRawText();
                         var chats = JsonSerializer.Deserialize<List<Chat>>(jsonChats);
                         allChats = chats;

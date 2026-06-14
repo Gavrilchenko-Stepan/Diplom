@@ -442,7 +442,7 @@ namespace Messenger.Client
             this.tabChats.Name = "tabChats";
             this.tabChats.Size = new System.Drawing.Size(852, 582);
             this.tabChats.TabIndex = 2;
-            this.tabChats.Text = "Управление чатами";
+            this.tabChats.Text = "Чаты";
             // 
             // panelChatsMain
             // 
