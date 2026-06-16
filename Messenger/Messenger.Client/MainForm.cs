@@ -131,6 +131,7 @@ namespace Messenger.Client
             txtMessage.ScrollBars = ScrollBars.Vertical;
             txtMessage.AcceptsReturn = true;
             txtMessage.TextChanged += TxtMessage_TextChanged;
+            txtMessage.KeyDown += TxtMessage_KeyDown;
 
             // Шрифты для списка чатов
             boldFont11 = new Font("Segoe UI", 11, FontStyle.Bold);
