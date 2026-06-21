@@ -53,6 +53,7 @@ namespace Messenger.Client
         private const string KEY_LAST_CHAT = "LastChatId";
         private ToolTip chatToolTip;
         private bool _disconnectedShown = false;
+        private bool _isLoadingChats = false;
 
         public MainForm()
         {
@@ -421,7 +422,10 @@ namespace Messenger.Client
         private void LoadChats()
         {
             if (networkClient?.IsConnected == true)
+            {
+                _isLoadingChats = true;
                 networkClient.SendPacket(new NetworkPacket { Command = Shared.CommandType.GetChats, UserId = currentUser.Id });
+            }
             else
                 Console.WriteLine("LoadChats: клиент не подключён");
         }
@@ -439,6 +443,9 @@ namespace Messenger.Client
                 switch (packet.Command)
                 {
                     case Shared.CommandType.ChatsList:
+                        if (!_isLoadingChats)
+                            break;
+                        _isLoadingChats = false;
                         var jsonElemChats = (JsonElement)packet.Data;
                         string jsonChats = jsonElemChats.GetRawText();
                         chats = JsonSerializer.Deserialize<List<Chat>>(jsonChats);
@@ -639,6 +646,7 @@ namespace Messenger.Client
 
         private void OnDisconnected()
         {
+            _isLoadingChats = false;
             if (_disconnectedShown) return;
             _disconnectedShown = true;
 

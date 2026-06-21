@@ -38,6 +38,10 @@ namespace Messenger.Client
 
         private bool waitingForHistoryChats = false;
 
+        private bool _isRefreshing = false;
+
+        private BindingSource departmentsBindingSource = new BindingSource();
+
         public AdminDashboardForm(NetworkClient client, User user)
         {
             InitializeComponent();
@@ -94,16 +98,26 @@ namespace Messenger.Client
             btnCreateDeptChat.Click += BtnCreateDeptChat_Click;
             btnDeleteDeptChat.Click += BtnDeleteDeptChat_Click;
 
+            dgvDepartments.DataSource = departmentsBindingSource;
+            dgvDepartments.AutoGenerateColumns = false;
+
+            ConfigureDepartmentsColumns();
+
             this.lstHistoryMessages.DrawMode = DrawMode.OwnerDrawVariable;
             this.lstHistoryMessages.MeasureItem += new MeasureItemEventHandler(this.LstHistory_MeasureItem);
             this.lstHistoryMessages.DrawItem += new DrawItemEventHandler(this.LstHistory_DrawItem);
 
-            LoadData();
+            this.Load += (s, e) => LoadData();
         }
 
         private void LoadData()
         {
             _selectedChatIdForChats = (tvChats.SelectedNode?.Tag as Chat)?.Id;
+
+            allChatsList = null;
+            tvChats.Nodes.Clear();
+            waitingForHistoryChats = true;
+            _isRefreshing = true;
 
             networkClient.SendPacket(new NetworkPacket { Command = Shared.CommandType.GetAllUsers });
             networkClient.SendPacket(new NetworkPacket { Command = Shared.CommandType.GetDepartments });
@@ -139,6 +153,11 @@ namespace Messenger.Client
                             break;
                         }
                         waitingForHistoryChats = false;
+
+                        if (!_isRefreshing)
+                            break;
+                        _isRefreshing = false;
+
                         var jsonChats = ((JsonElement)packet.Data).GetRawText();
                         var chats = JsonSerializer.Deserialize<List<Chat>>(jsonChats);
                         allChats = chats;
@@ -167,6 +186,7 @@ namespace Messenger.Client
 
                         UpdateChatsTree();
                         UpdateChatActionButtons(null);
+                        networkClient.SendPacket(new NetworkPacket { Command = Shared.CommandType.GetDepartments });
                         break;
                     case Shared.CommandType.MessagesList:
                         var jsonMsgs = ((JsonElement)packet.Data).GetRawText();
@@ -185,6 +205,7 @@ namespace Messenger.Client
                         cmbChat.DataSource = allChats;
                         cmbChat.DisplayMember = "Name";
                         cmbChat.ValueMember = "Id";
+                        networkClient.SendPacket(new NetworkPacket { Command = Shared.CommandType.GetDepartments });
                         break;
                     case Shared.CommandType.ChatInfo:
                         var jsonChatInfo = ((JsonElement)packet.Data).GetRawText();
@@ -222,48 +243,12 @@ namespace Messenger.Client
 
         private void DisplayDepartments()
         {
-            dgvDepartments.DataSource = null;
-            dgvDepartments.DataSource = departments;
+            departmentsBindingSource.DataSource = null;
+            departmentsBindingSource.DataSource = departments;
+            departmentsBindingSource.ResetBindings(false);
 
-            // Скрываем служебные колонки
             if (dgvDepartments.Columns["Id"] != null)
                 dgvDepartments.Columns["Id"].Visible = false;
-            if (dgvDepartments.Columns["ChatId"] != null)
-                dgvDepartments.Columns["ChatId"].Visible = false;
-
-            // Настройка заголовков
-            if (dgvDepartments.Columns["Name"] != null)
-                dgvDepartments.Columns["Name"].HeaderText = "Название отдела";
-            if (dgvDepartments.Columns.Contains("Description"))
-                dgvDepartments.Columns["Description"].HeaderText = "Описание";
-            if (dgvDepartments.Columns["Id"] != null)
-                dgvDepartments.Columns["Id"].Visible = false;
-
-            // Добавляем колонку "Чат создан", если её нет
-            if (!dgvDepartments.Columns.Contains("HasChat"))
-            {
-                DataGridViewCheckBoxColumn col = new DataGridViewCheckBoxColumn
-                {
-                    Name = "HasChat",
-                    HeaderText = "Чат создан",
-                    ReadOnly = true,
-                    Width = 80
-                };
-                dgvDepartments.Columns.Add(col);
-            }
-
-            // Заполняем колонку HasChat на основе свойства ChatId
-            foreach (DataGridViewRow row in dgvDepartments.Rows)
-            {
-                var dept = row.DataBoundItem as Department;
-                if (dept != null)
-                {
-                    row.Cells["HasChat"].Value = dept.ChatId.HasValue;
-                }
-            }
-
-            // Настраиваем внешний вид таблицы
-            dgvDepartments.ClearSelection();
         }
 
         // ================== Управление пользователями ==================
@@ -963,6 +948,41 @@ namespace Messenger.Client
                 Data = dept.ChatId.Value   // передаём ID чата
             });
             LoadData();
+        }
+
+        private void ConfigureDepartmentsColumns()
+        {
+            dgvDepartments.Columns.Clear();
+
+            // Создаём колонки вручную
+            var colId = new DataGridViewTextBoxColumn { Name = "Id", DataPropertyName = "Id", Visible = false };
+            var colName = new DataGridViewTextBoxColumn { Name = "Name", DataPropertyName = "Name", HeaderText = "Название отдела", Width = 200 };
+            var colDesc = new DataGridViewTextBoxColumn { Name = "Description", DataPropertyName = "Description", HeaderText = "Описание", Width = 250 };
+            var colChatId = new DataGridViewTextBoxColumn { Name = "ChatId", DataPropertyName = "ChatId", Visible = false };
+
+            // Колонка-галочка (привязана к ChatId, но отображаем как CheckBox)
+            var colHasChat = new DataGridViewCheckBoxColumn
+            {
+                Name = "HasChat",
+                HeaderText = "Чат создан",
+                ReadOnly = true,
+                Width = 80,
+                ValueType = typeof(bool),
+                DataPropertyName = "ChatId" // привязка к свойству ChatId
+            };
+
+            dgvDepartments.Columns.AddRange(colId, colName, colDesc, colChatId, colHasChat);
+
+            // Подписываемся на форматирование, чтобы преобразовать int? → bool
+            dgvDepartments.CellFormatting += (s, e) =>
+            {
+                if (dgvDepartments.Columns[e.ColumnIndex].Name == "HasChat" && e.RowIndex >= 0)
+                {
+                    var dept = departmentsBindingSource[e.RowIndex] as Department;
+                    if (dept != null)
+                        e.Value = dept.ChatId.HasValue;
+                }
+            };
         }
     }
 }

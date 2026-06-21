@@ -11,6 +11,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.ProgressBar;
 
 namespace Messenger.Client
 {
@@ -38,6 +39,8 @@ namespace Messenger.Client
             tvGroupUsers.AfterCheck += TvGroupUsers_AfterCheck;
             txtChatName.TextChanged += TxtChatName_TextChanged;
             tabControl.SelectedIndexChanged += TabControl_SelectedIndexChanged;
+
+            tvGroupUsers.AfterCheck += TvGroupUsers_AfterCheck;
         }
 
         private void NewChatForm_Load(object sender, EventArgs e)
@@ -137,9 +140,18 @@ namespace Messenger.Client
         private void UpdateCreateButton()
         {
             if (tabControl.SelectedTab == tabPrivate)
+            {
                 btnCreate.Enabled = tvPrivateUsers.SelectedNode?.Tag is User;
+            }
             else // tabGroup
-                btnCreate.Enabled = !string.IsNullOrWhiteSpace(txtChatName.Text) && GetCheckedGroupUsers().Count > 0;
+            {
+                bool hasName = !string.IsNullOrWhiteSpace(txtChatName.Text);
+                int count = GetCheckedGroupUsers().Count;
+                btnCreate.Enabled = hasName && count > 0;
+
+                // Для отладки – вывести в консоль
+                Debug.WriteLine($"Group: hasName={hasName}, count={count}, enabled={btnCreate.Enabled}");
+            }
         }
 
         private List<User> GetCheckedGroupUsers()
@@ -161,8 +173,38 @@ namespace Messenger.Client
         private void TvPrivateUsers_AfterSelect(object sender, TreeViewEventArgs e) => UpdateCreateButton();
         private void TvGroupUsers_AfterCheck(object sender, TreeViewEventArgs e)
         {
-            if (e.Action != TreeViewAction.Unknown)
-                UpdateCreateButton();
+            if (e.Action == TreeViewAction.Unknown) return;
+
+            TreeNode node = e.Node;
+
+            // Если это отдел (родительский узел)
+            if (node.Parent == null)
+            {
+                // Устанавливаем всем дочерним узлам такое же состояние Checked
+                foreach (TreeNode child in node.Nodes)
+                    child.Checked = node.Checked;
+            }
+            else
+            {
+                // Если это пользователь, то проверяем, все ли пользователи отдела отмечены
+                TreeNode parent = node.Parent;
+                if (parent != null)
+                {
+                    bool allChecked = true;
+                    foreach (TreeNode child in parent.Nodes)
+                    {
+                        if (!child.Checked)
+                        {
+                            allChecked = false;
+                            break;
+                        }
+                    }
+                    // Если все дочерние узлы отмечены, ставим галочку на отделе, иначе снимаем
+                    parent.Checked = allChecked;
+                }
+            }
+
+            UpdateCreateButton();
         }
         private void TxtChatName_TextChanged(object sender, EventArgs e) => UpdateCreateButton();
 
