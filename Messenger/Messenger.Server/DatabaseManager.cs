@@ -55,7 +55,6 @@ namespace Messenger.Server
                             {
                                 using (var alter = new SQLiteCommand("ALTER TABLE departments ADD COLUMN chat_id INTEGER REFERENCES chats(id) ON DELETE SET NULL", connection))
                                     alter.ExecuteNonQuery();
-                                Console.WriteLine("Добавлена колонка chat_id в departments.");
                             }
                         }
                     }
@@ -72,7 +71,6 @@ namespace Messenger.Server
                         {
                             using (var alter = new SQLiteCommand("ALTER TABLE messages ADD COLUMN edited_at DATETIME", connection))
                                 alter.ExecuteNonQuery();
-                            Console.WriteLine("Добавлена колонка edited_at в таблицу messages.");
                         }
                     }
                     EnsureFirstUser();
@@ -877,7 +875,7 @@ namespace Messenger.Server
                                 FullName = reader.GetString(2),
                                 DepartmentId = reader.IsDBNull(3) ? (int?)null : reader.GetInt32(3),
                                 Position = reader.IsDBNull(4) ? null : reader.GetString(4),
-                                IsAdmin = !reader.IsDBNull(5) && reader.GetInt32(5) == 1,  // <-- исправлено
+                                IsAdmin = !reader.IsDBNull(5) && reader.GetInt32(5) == 1,
                                 Department = reader.GetString(6),
                                 IsOnline = !reader.IsDBNull(7) && reader.GetBoolean(7),
                                 LastSeen = reader.IsDBNull(8) ? (DateTime?)null : reader.GetDateTime(8)
@@ -1128,7 +1126,6 @@ namespace Messenger.Server
                         }
                     }
                 }
-                Console.WriteLine($"[DB] GetMessagesFilteredByChatAndDate: возвращено {logs.Count} записей");
                 return logs;
             }
         }

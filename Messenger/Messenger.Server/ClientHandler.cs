@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Messenger.Shared;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
+using System.Data.SQLite;
 
 namespace Messenger.Server
 {
@@ -80,8 +81,6 @@ namespace Messenger.Server
 
         private void ProcessPacket(NetworkPacket packet)
         {
-            if (packet.Command != CommandType.GetChats)
-                server.Log($"Команда: {packet.Command} от пользователя {User?.Username ?? "unknown"}");
             try
             {
                 switch (packet.Command)
@@ -169,7 +168,6 @@ namespace Messenger.Server
 
         private void HandleLogin(NetworkPacket packet)
         {
-            server.Log("HandleLogin started");
             var data = packet.Data as JsonElement?;
             if (!data.HasValue)
             {
@@ -181,10 +179,8 @@ namespace Messenger.Server
             {
                 string username = data.Value.GetProperty("username").GetString();
                 string password = data.Value.GetProperty("password").GetString();
-                server.Log($"Login attempt: {username}");
 
                 User = db.AuthenticateUser(username, password);
-                server.Log($"AuthenticateUser returned: {(User != null ? $"IsAdmin={User.IsAdmin}" : "null")} for user {username}");
 
                 if (User != null)
                 {
@@ -197,7 +193,6 @@ namespace Messenger.Server
                 else
                 {
                     SendPacket(new NetworkPacket { Command = CommandType.LoginResponse, Data = new { success = false, message = "Неверный логин или пароль" } });
-                    server.Log("Login failed: invalid credentials");
                 }
             }
             catch (Exception ex)
@@ -263,14 +258,12 @@ namespace Messenger.Server
             int id = db.SaveMessage(msg);
             msg.Id = id;
             server.BroadcastToChat(msg.ChatId, new NetworkPacket { Command = CommandType.NewMessage, Data = msg }, -1);
-            server.Log($"Сообщение от {User.FullName} в чат {msg.ChatId}");
         }
 
         private void HandleGetDepartments()
         {
             if (User == null) return;
             var depts = db.GetAllDepartments();
-            Console.WriteLine($"HandleGetDepartments: sending {depts.Count} departments");
             SendPacket(new NetworkPacket { Command = CommandType.DepartmentsList, Data = depts });
         }
 
@@ -293,9 +286,7 @@ namespace Messenger.Server
                 return;
             }
 
-            server.Log($"HandleGetAvailableUsers: запрос от пользователя {User.Id} для uid={uid}");
             var users = db.GetAvailableUsersForChat(uid);
-            server.Log($"HandleGetAvailableUsers: отправляю {users.Count} пользователей");
             SendPacket(new NetworkPacket { Command = CommandType.AvailableUsersList, Data = users });
         }
 
@@ -345,7 +336,6 @@ namespace Messenger.Server
             int chatId = data["chatId"];
             int lastReadId = data["lastReadMessageId"];
             db.MarkMessagesAsRead(chatId, User.Id, lastReadId);
-            server.Log($"Пользователь {User.Id} отметил сообщения в чате {chatId} прочитанными до {lastReadId}");
         }
 
         public void SendPacket(NetworkPacket packet)
@@ -363,6 +353,7 @@ namespace Messenger.Server
 
         public void Disconnect()
         {
+            if (!isConnected) return;
             try
             {
                 if (User != null)
@@ -548,13 +539,39 @@ namespace Messenger.Server
         private void HandleAddUser(NetworkPacket packet)
         {
             if (User == null || !User.IsAdmin) return;
-            var jsonElement = (JsonElement)packet.Data;
-            string json = jsonElement.GetRawText();
-            var data = JsonSerializer.Deserialize<Dictionary<string, object>>(json);
-            var user = JsonSerializer.Deserialize<User>(data["user"].ToString());
-            string password = data["password"].ToString();
-            db.AddUser(user, password);
-            SendPacket(new NetworkPacket { Command = CommandType.AllUsersList, Data = db.GetAllUsers() });
+
+            User user = null;
+            string password = null;
+
+            try
+            {
+                var jsonElement = (JsonElement)packet.Data;
+                string json = jsonElement.GetRawText();
+                var data = JsonSerializer.Deserialize<Dictionary<string, object>>(json);
+                user = JsonSerializer.Deserialize<User>(data["user"].ToString());
+                password = data["password"].ToString();
+
+                db.AddUser(user, password);
+                SendPacket(new NetworkPacket { Command = CommandType.AllUsersList, Data = db.GetAllUsers() });
+            }
+            catch (SQLiteException ex) when (ex.Message.Contains("UNIQUE constraint failed"))
+            {
+                string username = user?.Username ?? "неизвестный";
+                SendPacket(new NetworkPacket
+                {
+                    Command = CommandType.Error,
+                    Data = $"Пользователь с логином '{username}' уже существует"
+                });
+            }
+            catch (Exception ex)
+            {
+                server.Log($"Ошибка добавления пользователя: {ex.Message}");
+                SendPacket(new NetworkPacket
+                {
+                    Command = CommandType.Error,
+                    Data = $"Ошибка при добавлении пользователя: {ex.Message}"
+                });
+            }
         }
 
         private void HandleUpdateUser(NetworkPacket packet)
@@ -693,10 +710,7 @@ namespace Messenger.Server
             if (json.TryGetProperty("endDate", out var endProp) && endProp.ValueKind != JsonValueKind.Null)
                 endDate = endProp.GetDateTime();
 
-            server.Log($"GetHistoryMessages: chatId={chatId}, start={startDate}, end={endDate}");
-
             var messages = db.GetMessagesFilteredByChatAndDate(chatId, startDate, endDate);
-            server.Log($"GetHistoryMessages: возвращено {messages.Count} сообщений");
 
             SendPacket(new NetworkPacket { Command = CommandType.MessagesList, Data = messages });
         }
@@ -711,7 +725,6 @@ namespace Messenger.Server
                 chatId = chatIdProp.GetInt32();
 
             DateTime olderThan = json.GetProperty("olderThan").GetDateTime();
-            server.Log($"DeleteHistoryMessages: chatId={chatId}, olderThan={olderThan}");
 
             int deleted = db.DeleteMessagesByChatAndDate(chatId, olderThan);
             server.Log($"Удалено сообщений: {deleted}");

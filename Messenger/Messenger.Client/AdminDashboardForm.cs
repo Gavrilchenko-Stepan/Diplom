@@ -141,6 +141,7 @@ namespace Messenger.Client
                         var json = ((JsonElement)packet.Data).GetRawText();
                         allUsers = JsonSerializer.Deserialize<List<User>>(json);
                         UpdateTree(allUsers);
+                        RefreshChatsDisplay();
                         break;
                     case Shared.CommandType.DepartmentsList:
                         var jsonDept = ((JsonElement)packet.Data).GetRawText();
@@ -162,14 +163,10 @@ namespace Messenger.Client
                         var chats = JsonSerializer.Deserialize<List<Chat>>(jsonChats);
                         allChats = chats;
                         allChatsList = chats;
+                        RefreshChatsDisplay();
 
                         // Запоминаем текущий выбранный ID до пересоздания источника
                         int? previouslySelectedChatId = _currentChatId;
-
-                        cmbChat.DataSource = null;
-                        cmbChat.DataSource = allChats;
-                        cmbChat.DisplayMember = "Name";
-                        cmbChat.ValueMember = "Id";
 
                         // Восстанавливаем выбранный чат по ID
                         if (previouslySelectedChatId.HasValue && allChats.Any(c => c.Id == previouslySelectedChatId.Value))
@@ -183,8 +180,6 @@ namespace Messenger.Client
                             if (cmbChat.SelectedItem is Chat firstChat)
                                 _currentChatId = firstChat.Id;
                         }
-
-                        UpdateChatsTree();
                         UpdateChatActionButtons(null);
                         networkClient.SendPacket(new NetworkPacket { Command = Shared.CommandType.GetDepartments });
                         break;
@@ -983,6 +978,40 @@ namespace Messenger.Client
                         e.Value = dept.ChatId.HasValue;
                 }
             };
+        }
+
+        // Преобразует имя личного чата в имена участников
+        private string GetPrivateChatDisplayName(Chat chat)
+        {
+            if (chat.Type != ChatType.Private || allUsers == null)
+                return chat.Name;
+
+            var parts = chat.Name.Split('_');
+            if (parts.Length < 2) return chat.Name;
+
+            var userIds = parts.Skip(1).Select(int.Parse).ToList();
+            var names = allUsers.Where(u => userIds.Contains(u.Id)).Select(u => u.FullName).ToList();
+            return names.Count > 0 ? string.Join("↔ ", names) : chat.Name;
+        }
+
+        // Обновляет отображение чатов после переименования
+        private void RefreshChatsDisplay()
+        {
+            if (allUsers == null || allChats == null) return;
+
+            foreach (var chat in allChats.Where(c => c.Type == ChatType.Private))
+                chat.Name = GetPrivateChatDisplayName(chat);
+
+            // Обновить комбобокс
+            var selected = cmbChat.SelectedValue;
+            cmbChat.DataSource = null;
+            cmbChat.DataSource = allChats;
+            cmbChat.DisplayMember = "Name";
+            cmbChat.ValueMember = "Id";
+            if (selected != null && allChats.Any(c => c.Id == (int)selected))
+                cmbChat.SelectedValue = selected;
+
+            UpdateChatsTree(); // обновить дерево
         }
     }
 }

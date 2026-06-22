@@ -56,8 +56,6 @@ namespace Messenger.Client
                 return;
             }
 
-            Debug.WriteLine($"NewChatForm получил: {packet.Command}");
-
             try
             {
                 switch (packet.Command)
@@ -148,9 +146,6 @@ namespace Messenger.Client
                 bool hasName = !string.IsNullOrWhiteSpace(txtChatName.Text);
                 int count = GetCheckedGroupUsers().Count;
                 btnCreate.Enabled = hasName && count > 0;
-
-                // Для отладки – вывести в консоль
-                Debug.WriteLine($"Group: hasName={hasName}, count={count}, enabled={btnCreate.Enabled}");
             }
         }
 

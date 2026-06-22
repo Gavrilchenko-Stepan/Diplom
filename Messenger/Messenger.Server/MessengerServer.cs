@@ -80,7 +80,6 @@ namespace Messenger.Server
                     var clientThread = new Thread(clientHandler.HandleClient);
                     clientThread.IsBackground = true;
                     clientThread.Start();
-                    Log($"Новый клиент подключен. Всего: {clients.Count}");
                 }
                 catch (SocketException ex)
                 {

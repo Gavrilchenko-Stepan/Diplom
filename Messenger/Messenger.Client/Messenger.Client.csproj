@@ -189,6 +189,7 @@
     <ProjectReference Include="..\Messenger.Server\Messenger.Server.csproj">
       <Project>{202574CB-25BB-4C95-83D3-3BDE2F037C28}</Project>
       <Name>Messenger.Server</Name>
+      <Private>False</Private>
     </ProjectReference>
     <ProjectReference Include="..\Messenger.Shared\Messenger.Shared.csproj">
       <Project>{33b920fc-27e0-4ecb-ab8f-a39062946461}</Project>

@@ -68,7 +68,6 @@ namespace Messenger.Client
                     string json = reader.ReadLine();
                     if (!string.IsNullOrEmpty(json))
                     {
-                        Console.WriteLine($"Получен JSON: {json}");
                         var packet = JsonSerializer.Deserialize<NetworkPacket>(json);
                         OnPacketReceived?.Invoke(packet);
                     }

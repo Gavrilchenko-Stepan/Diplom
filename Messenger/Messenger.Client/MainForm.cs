@@ -426,8 +426,6 @@ namespace Messenger.Client
                 _isLoadingChats = true;
                 networkClient.SendPacket(new NetworkPacket { Command = Shared.CommandType.GetChats, UserId = currentUser.Id });
             }
-            else
-                Console.WriteLine("LoadChats: клиент не подключён");
         }
 
         private void OnPacketReceived(NetworkPacket packet)
@@ -518,7 +516,6 @@ namespace Messenger.Client
                         if (msgs.Any())
                         {
                             int chatId = msgs.First().ChatId;
-                            Debug.WriteLine($"Получен список сообщений для чата {chatId}, всего {msgs.Count}");
                             messages[chatId] = msgs;
                             if (currentChat != null && chatId == currentChat.Id)
                                 DisplayMessages();
@@ -537,7 +534,6 @@ namespace Messenger.Client
                         var jsonElemNewMsg = (JsonElement)packet.Data;
                         string jsonNewMsg = jsonElemNewMsg.GetRawText();
                         var newMsg = JsonSerializer.Deserialize<Shared.Message>(jsonNewMsg);
-                        Debug.WriteLine($"Получено новое сообщение: '{newMsg.Text}' в чат {newMsg.ChatId}");
                         HandleNewMessage(newMsg);
                         break;
 
@@ -545,7 +541,6 @@ namespace Messenger.Client
                         var jsonElemUser = (JsonElement)packet.Data;
                         string jsonUser = jsonElemUser.GetRawText();
                         var user = JsonSerializer.Deserialize<User>(jsonUser);
-                        Debug.WriteLine($"UserStatusChanged: {user.FullName} is {user.IsOnline}");
 
                         // Если изменился статус текущего пользователя
                         if (user.Id == currentUser.Id)
@@ -854,14 +849,12 @@ namespace Messenger.Client
 
         private void UpdateUserStatus(User user)
         {
-            Debug.WriteLine($"UpdateUserStatus: получили статус для {user.FullName} (Id={user.Id}) - онлайн={user.IsOnline}");
             bool updated = false;
             foreach (var chat in chats)
             {
                 var p = chat.Participants?.FirstOrDefault(x => x.Id == user.Id);
                 if (p != null)
                 {
-                    Debug.WriteLine($"  найден в чате {chat.Name}, старый статус {p.IsOnline}, новый {user.IsOnline}");
                     p.IsOnline = user.IsOnline;
                     p.LastSeen = user.LastSeen;
                     updated = true;
@@ -869,7 +862,6 @@ namespace Messenger.Client
             }
             if (updated)
             {
-                Debug.WriteLine("  Обновляем список чатов...");
                 UpdateChatsList();
             }
             else
